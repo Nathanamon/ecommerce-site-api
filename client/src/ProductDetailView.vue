@@ -2,7 +2,30 @@
   <div class="min-h-screen bg-gray-50">
     <AppHeader />
     
-    <main v-if="product" class="container mx-auto px-4 py-8">
+    <!-- État de chargement -->
+    <div v-if="loading" class="container mx-auto px-4 py-8">
+      <div class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Chargement du produit...</p>
+      </div>
+    </div>
+
+    <!-- Produit non trouvé -->
+    <div v-else-if="!product" class="container mx-auto px-4 py-8">
+      <div class="text-center py-12">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Produit non trouvé</h2>
+        <p class="text-gray-600 mb-6">Le produit que vous recherchez n'existe pas.</p>
+        <router-link 
+          to="/products" 
+          class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+        >
+          Voir tous les produits
+        </router-link>
+      </div>
+    </div>
+
+    <!-- Produit trouvé -->
+    <main v-else class="container mx-auto px-4 py-8">
       <!-- Fil d'Ariane -->
       <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <router-link to="/" class="hover:text-indigo-600">Accueil</router-link>
@@ -82,7 +105,7 @@
             </div>
 
             <!-- Options (couleur, taille, etc.) -->
-            <div class="mb-6" v-if="product.options">
+            <div class="mb-6" v-if="product.options && product.options.length > 0">
               <div v-for="option in product.options" :key="option.name" class="mb-4">
                 <h4 class="font-medium mb-2">{{ option.name }}</h4>
                 <div class="flex flex-wrap gap-2">
@@ -186,178 +209,39 @@
         />
       </section>
     </main>
-
-    <!-- État de chargement -->
-    <div v-else class="container mx-auto px-4 py-8">
-      <div class="text-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-        <p class="mt-4 text-gray-600">Chargement du produit...</p>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './AppHeader.vue'
 import ProductGrid from './ProductGrid.vue'
 import ReviewSection from './ReviewSection.vue'
+import { useCartStore } from './stores/cart' // N'oublie pas le store panier !
 
 const route = useRoute()
+const cartStore = useCartStore()
+
 const product = ref(null)
 const mainImage = ref('')
 const selectedOptions = ref({})
 const quantity = ref(1)
 const loading = ref(true)
+const error = ref(null)
+const recommendedProducts = ref([])
 
-// DONNÉES MOCKÉES COMPLÈTES - Ajoute tous tes produits ici
-const productData = {
-  1: {
-    id: 1,
-    name: 'Smartphone High-Tech 2024',
-    price: 799,
-    originalPrice: 899,
-    discount: 11,
-    rating: 4.5,
-    reviewCount: 152,
-    stock: 5,
-    description: 'Découvrez le smartphone ultime avec un écran AMOLED 6.7 pouces, triple appareil photo 108MP et batterie longue durée. Parfait pour la productivité et le divertissement.',
-    images: [
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600',
-      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600',
-      'https://images.unsplash.com/photo-1523205771623-e0faa4d2813d?w=600'
-    ],
-    options: [
-      {
-        name: 'Couleur',
-        values: ['Noir', 'Blanc', 'Bleu', 'Violet']
-      },
-      {
-        name: 'Stockage',
-        values: ['128GB', '256GB', '512GB']
-      }
-    ],
-    reviews: [
-      { id: 1, user: 'Marie D.', rating: 5, comment: 'Excellent produit, je recommande !', date: '2024-01-15' },
-      { id: 2, user: 'Pierre L.', rating: 4, comment: 'Très bon rapport qualité-prix.', date: '2024-01-10' }
-    ]
-  },
-  2: {
-    id: 2,
-    name: 'Casque Audio Sans Fil',
-    price: 199,
-    rating: 4.2,
-    reviewCount: 89,
-    stock: 15,
-    description: 'Casque audio sans fil avec réduction de bruit active, autonomie de 30 heures et qualité sonore exceptionnelle.',
-    images: [
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600',
-      'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600'
-    ],
-    options: [
-      {
-        name: 'Couleur',
-        values: ['Noir', 'Blanc', 'Bleu']
-      }
-    ],
-    reviews: [
-      { id: 1, user: 'Sophie M.', rating: 4, comment: 'Très bon casque, confortable et bon son.', date: '2024-01-12' }
-    ]
-  },
-  3: {
-    id: 3,
-    name: 'Montre Connectée Sport',
-    price: 299,
-    originalPrice: 349,
-    discount: 14,
-    rating: 4.8,
-    reviewCount: 203,
-    stock: 25,
-    description: 'Montre connectée sport avec GPS intégré, monitoring cardiaque et autonomie de 7 jours. Parfaite pour les sportifs.',
-    images: [
-      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600',
-      'https://images.unsplash.com/photo-1544117519-31a4b719223d?w=600'
-    ],
-    options: [
-      {
-        name: 'Taille',
-        values: ['38mm', '42mm', '46mm']
-      },
-      {
-        name: 'Couleur',
-        values: ['Noir', 'Argent', 'Or Rose']
-      }
-    ],
-    reviews: [
-      { id: 1, user: 'Thomas R.', rating: 5, comment: 'Parfaite pour le running !', date: '2024-01-14' }
-    ]
-  },
-  4: {
-    id: 4,
-    name: 'Laptop Ultra Mince',
-    price: 1299,
-    rating: 4.1,
-    reviewCount: 67,
-    stock: 8,
-    description: 'Laptop ultra performant avec processeur dernière génération, 16GB RAM et SSD 512GB. Idéal pour le travail et les loisirs.',
-    images: [
-      'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600',
-      'https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?w=600'
-    ],
-    options: [
-      {
-        name: 'Configuration',
-        values: ['8GB/256GB', '16GB/512GB', '32GB/1TB']
-      }
-    ],
-    reviews: []
-  },
-  5: {
-    id: 5,
-    name: 'Enceinte Bluetooth',
-    price: 149,
-    rating: 4.3,
-    reviewCount: 134,
-    stock: 0,
-    description: 'Enceinte Bluetooth portable avec son stéréo puissant, résistante à leau et autonomie de 20 heures.',
-    images: [
-      'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600'
-    ],
-    options: [],
-    reviews: [
-      { id: 1, user: 'Laura P.', rating: 4, comment: 'Son puissant et bonne autonomie.', date: '2024-01-08' }
-    ]
-  }
-  // Ajoute les autres produits (6, 7, 8, etc.) de la même manière...
-}
+// Récupérer l'ID depuis l'URL
+const currentProductId = computed(() => route.params.id)
 
-// Produits recommandés mockés
-const recommendedProducts = ref([
-  {
-    id: 2, name: 'Casque Audio Sans Fil', price: 199, 
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', reviewCount: 89, stock: 15, rating: 4.2
-  },
-  {
-    id: 3, name: 'Montre Connectée Sport', price: 299, originalPrice: 349, discount: 14,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400', reviewCount: 203, stock: 25, rating: 4.8
-  },
-  {
-    id: 6, name: 'Souris Gaming', price: 79, 
-    image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400', reviewCount: 89, stock: 20, rating: 4.6
-  }
-])
+// --- Méthodes ---
 
-// Computed
-const currentProductId = computed(() => parseInt(route.params.id))
-
-// Méthodes
 const selectOption = (optionName, value) => {
   selectedOptions.value[optionName] = value
 }
 
 const increaseQuantity = () => {
-  if (quantity.value < product.value.stock) {
+  if (product.value && quantity.value < product.value.stock) {
     quantity.value++
   }
 }
@@ -369,32 +253,56 @@ const decreaseQuantity = () => {
 }
 
 const addToCart = () => {
-  if (product.value.stock > 0) {
-    const cartItem = {
-      ...product.value,
-      quantity: quantity.value,
-      selectedOptions: { ...selectedOptions.value }
-    }
-    console.log('Ajout au panier:', cartItem)
-    alert(`Produit ajouté au panier ! Quantité: ${quantity.value}`)
+  if (product.value && product.value.stock > 0) {
+    cartStore.addToCart(product.value, quantity.value, selectedOptions.value)
+    alert(`Produit ajouté au panier !`)
   }
 }
 
-// Lifecycle
-onMounted(() => {
-  // Simulation de chargement asynchrone
-  setTimeout(() => {
-    product.value = productData[currentProductId.value]
-    if (product.value) {
-      mainImage.value = product.value.images[0]
-      // Sélectionner les premières options par défaut
-      if (product.value.options) {
-        product.value.options.forEach(option => {
-          selectedOptions.value[option.name] = option.values[0]
-        })
-      }
+// Fonction pour charger un produit spécifique
+const fetchProduct = async (id) => {
+  loading.value = true
+  error.value = null
+  try {
+    const response = await fetch(`http://localhost:3000/api/products/${id}`)
+    
+    if (!response.ok) throw new Error('Produit introuvable')
+    
+    const data = await response.json()
+    product.value = data
+    
+    // Initialisation de l'image principale
+    // Note : Ton backend renvoie 'images' comme un tableau, on prend le premier
+    if (data.images && data.images.length > 0) {
+      mainImage.value = data.images[0]
+    } else {
+      mainImage.value = data.image // Fallback si pas de tableau
     }
-    loading.value = false // ← Arrête le loading
-  }, 500)
+
+    // Initialisation des options (si tu en ajoutes plus tard dans la BDD)
+    if (data.options) {
+      data.options.forEach(option => {
+        selectedOptions.value[option.name] = option.values[0]
+      })
+    }
+    
+  } catch (err) {
+    console.error("Erreur chargement produit:", err)
+    error.value = "Impossible de charger le produit."
+  } finally {
+    loading.value = false
+  }
+}
+
+// --- Lifecycle ---
+
+onMounted(() => {
+  fetchProduct(currentProductId.value)
+})
+
+// Important : Recharger si on change d'ID dans l'URL (ex: clic sur produit similaire)
+watch(currentProductId, (newId) => {
+  fetchProduct(newId)
+  quantity.value = 1 // Remettre la quantité à 1
 })
 </script>
