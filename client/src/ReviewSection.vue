@@ -158,25 +158,43 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('fr-FR')
 }
 
-const submitReview = () => {
+const submitReview = async () => {
   if (newReview.value.rating && newReview.value.comment) {
-    const review = {
-      id: Date.now(),
-      user: 'Vous',
-      rating: newReview.value.rating,
-      comment: newReview.value.comment,
-      date: new Date().toISOString().split('T')[0]
+    try {
+      // 1. Appel à l'API qu'on vient de créer
+      const response = await fetch(`http://localhost:3000/api/products/${props.productId}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          rating: newReview.value.rating,
+          comment: newReview.value.comment
+        })
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de l'envoi");
+
+      const savedReview = await response.json();
+
+      // 2. Mise à jour instantanée de l'affichage (sans recharger)
+      props.reviews.unshift({
+        id: savedReview.id,
+        user: 'Vous (à l\'instant)',
+        rating: savedReview.rating,
+        comment: savedReview.commentaire, // On utilise le champ renvoyé par la base
+        date: new Date().toISOString()
+      });
+
+      // 3. Nettoyage du formulaire
+      newReview.value = { rating: 0, comment: '' };
+      showReviewForm.value = false;
+      alert('Merci pour votre avis !');
+
+    } catch (e) {
+      console.error(e);
+      alert("Impossible d'envoyer l'avis. Vérifiez que le serveur tourne.");
     }
-    
-    // Ici, nous appellerons l'API plus tard
-    console.log('Nouvel avis:', review)
-    props.reviews.unshift(review)
-    
-    // Réinitialiser le formulaire
-    newReview.value = { rating: 0, comment: '' }
-    showReviewForm.value = false
-    
-    alert('Merci pour votre avis !')
   }
 }
 </script>

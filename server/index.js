@@ -1,4 +1,5 @@
 require('dotenv').config();
+const axios = require('axios');
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
@@ -31,7 +32,7 @@ app.get('/api/products', async (req, res) => {
     // 2. On transforme les données pour le Frontend
     const formattedProducts = data.map(product => {
       // On récupère le tableau des avis liés à ce produit (ex: [{rating: 5}, {rating: 4}])
-      const reviews = product.Reviews || [];
+      const reviews = product.reviews || [];
       const reviewCount = reviews.length;
       
       // Calcul mathématique de la moyenne
@@ -126,6 +127,112 @@ app.get('/api/products/:id', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(404).json({ error: 'Produit introuvable' });
+  }
+});
+
+// --- ROUTE AJOUTER UN AVIS (Respect du contrat) ---
+// --- ROUTE AJOUTER UN AVIS ---
+app.post('/api/products/:id/reviews', async (req, res) => {
+  const { id } = req.params; // L'ID du produit
+  const { rating, comment } = req.body; // La note et le commentaire
+
+  // 1. Validation : On vérifie que tout est là
+  if (!rating || !comment) {
+    return res.status(400).json({ error: 'Note et commentaire requis.' });
+  }
+
+  try {
+    // 2. Insertion dans Supabase
+    const { data, error } = await supabase
+      .from('reviews') // Attention : minuscule si ta table est "reviews"
+      .insert([
+        { 
+          product_id: id, 
+          rating: rating, 
+          commentaire: comment // Mapping : on reçoit 'comment', on écrit dans 'commentaire'
+          // user_id: 1 // (Optionnel) Tu pourras lier un user plus tard
+        }
+      ])
+      .select()
+      .single(); // On récupère l'objet créé pour le renvoyer
+
+    if (error) throw error;
+    
+    // 3. Succès
+    res.status(201).json(data);
+
+  } catch (error) {
+    console.error('Erreur ajout avis:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- ROUTE RECOMMANDATION MÉTÉO ---
+app.get('/api/recommendations/weather', async (req, res) => {
+  const { lat, lon } = req.query;
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+
+  if (!lat || !lon) {
+    return res.status(400).json({ error: 'Coordonnées GPS requises' });
+  }
+
+  try {
+    // 1. Appel à l'API Externe (OpenWeather)
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
+    const weatherResponse = await axios.get(weatherUrl);
+    
+    const temp = weatherResponse.data.main.temp;
+    const description = weatherResponse.data.weather[0].description;
+    
+    // 2. Logique de Recommandation "EcoMarket"
+    let categoryFilter;
+    let message;
+
+    // S'il fait chaud (> 20°C), on suggère de sortir (Audio portable, Téléphonie)
+    if (temp > 18) { // S'il fait > 18°C (Beau temps)
+      // On recommande : Audio (Enceinte plage), Mobilité (Trottinette), Photo (Drone)
+      categoryFilter = ['Audio', 'Mobilité', 'Photo', 'Wearables']; 
+      message = `Il fait ${Math.round(temp)}°C ☀️ ! Équipez-vous pour l'extérieur.`;
+    } 
+    else { // S'il fait froid / Pluie
+      // On recommande : Gaming (Pack), Maison (Projecteur/Chauffage), Informatique
+      categoryFilter = ['Gaming', 'Maison', 'Informatique']; 
+      message = `Il fait ${Math.round(temp)}°C 🌧️... Le moment idéal pour rester chez soi !`;
+    }
+
+    // 3. Récupération des produits correspondants dans Supabase
+    // On utilise .in() pour chercher dans plusieurs catégories
+    const { data: products, error } = await supabase
+      .from('products') // Attention majuscule/minuscule selon ta base
+      .select('*, reviews(rating)')
+      .in('category', categoryFilter) 
+      .limit(4); // On en prend juste 4 pour l'affichage
+
+    if (error) throw error;
+
+    // On formate (calcul moyenne étoiles) comme d'habitude
+    const formattedProducts = products.map(p => {
+      const reviews = p.reviews || [];
+      const avg = reviews.length > 0 
+        ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
+        : 0;
+      return {
+        ...p,
+        name: p.nom, price: p.prix, image: p.image_url, stock: p.stock_level, // Mapping FR -> EN
+        rating: parseFloat(avg.toFixed(1)), reviewCount: reviews.length
+      };
+    });
+
+    // On renvoie les produits ET le message météo contextuel
+    res.json({
+      weather: { temp, description, city: weatherResponse.data.name },
+      message,
+      products: formattedProducts
+    });
+
+  } catch (error) {
+    console.error('Erreur Météo:', error.message);
+    res.status(500).json({ error: "Impossible de récupérer la météo" });
   }
 });
 

@@ -29,9 +29,10 @@
       <!-- Section de recommandations IA -->
       <ProductGrid 
         :products="recommendedProducts"
-        title="Recommandés pour vous"
+        :title="weatherMessage || 'Recommandés pour vous'"
         :loading="false"
       />
+      
     </main>
   </div>
 </template>
@@ -44,113 +45,53 @@ import { ref, onMounted } from 'vue'
 // Données mockées pour l'instant - seront remplacées par un appel API
 const featuredProducts = ref([])
 const recommendedProducts = ref([])
+const weatherMessage = ref('')
 
 // Simulation de chargement asynchrone
 onMounted(async () => {
-  // Simule un appel API
-  await new Promise(resolve => setTimeout(resolve, 300))
-  
-  featuredProducts.value = [
-    {
-      id: 1,
-      name: 'Smartphone High-Tech 2024',
-      price: 799,
-      originalPrice: 899,
-      discount: 11,
-      image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
-      reviewCount: 152,
-      stock: 5,
-      rating: 4.5
-    },
-    {
-      id: 2,
-      name: 'Casque Audio Sans Fil',
-      price: 199,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
-      reviewCount: 89,
-      stock: 15,
-      rating: 4.2
-    },
-    {
-      id: 3,
-      name: 'Montre Connectée Sport',
-      price: 299,
-      originalPrice: 349,
-      discount: 14,
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
-      reviewCount: 203,
-      stock: 25,
-      rating: 4.8
-    },
-    {
-      id: 4,
-      name: 'Laptop Ultra Mince',
-      price: 1299,
-      image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400',
-      reviewCount: 67,
-      stock: 8,
-      rating: 4.1
-    },
-    {
-      id: 5,
-      name: 'Enceinte Bluetooth',
-      price: 149,
-      image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400',
-      reviewCount: 134,
-      stock: 0,
-      rating: 4.3
-    }
-  ]
+  try {
+    // A. Chargement des produits classiques (Populaires)
+    const resProducts = await fetch('http://localhost:3000/api/products');
+    const allProducts = await resProducts.json();
+    featuredProducts.value = allProducts.slice(0, 4);
 
-  // Produits recommandés mockés (simulation IA)
-  recommendedProducts.value = [
-    {
-      id: 6,
-      name: 'Souris Gaming RGB',
-      price: 89,
-      image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400',
-      reviewCount: 234,
-      stock: 20,
-      rating: 4.6
-    },
-    {
-      id: 7,
-      name: 'Clavier Mécanique Rétroéclairé',
-      price: 149,
-      originalPrice: 179,
-      discount: 17,
-      image: 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=400',
-      reviewCount: 189,
-      stock: 12,
-      rating: 4.4
-    },
-    {
-      id: 8,
-      name: 'Webcam 4K avec Micro',
-      price: 129,
-      image: 'https://images.unsplash.com/photo-1558089684-f07c6d95f7c6?w=400',
-      reviewCount: 76,
-      stock: 30,
-      rating: 4.7
-    },
-    {
-      id: 9,
-      name: 'Tablette Graphique Professionnelle',
-      price: 349,
-      image: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?w=400',
-      reviewCount: 45,
-      stock: 7,
-      rating: 4.9
-    },
-    {
-      id: 10,
-      name: 'Disque Dur SSD 1TB',
-      price: 119,
-      image: 'https://images.unsplash.com/photo-1597852074816-d933c7d2b988?w=400',
-      reviewCount: 312,
-      stock: 45,
-      rating: 4.5
+    // B. Recommandation IA / Météo (API Externe)
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            // Appel à TON API qui va parler à OpenWeather
+            const resWeather = await fetch(`http://localhost:3000/api/recommendations/weather?lat=${latitude}&lon=${longitude}`);
+            const data = await resWeather.json();
+            
+            if (data.products && data.products.length > 0) {
+              recommendedProducts.value = data.products;
+              weatherMessage.value = data.message; // Le message dynamique !
+            } else {
+              // Fallback si pas de produits trouvés
+              recommendedProducts.value = allProducts.slice(4, 8);
+              weatherMessage.value = "Recommandés pour vous";
+            }
+          } catch (e) {
+            console.error("Erreur API Météo", e);
+            recommendedProducts.value = allProducts.slice(4, 8); // Fallback
+          }
+        },
+        (error) => {
+          console.log("Géolocalisation refusée, affichage par défaut.");
+          recommendedProducts.value = allProducts.slice(4, 8);
+          weatherMessage.value = "Recommandés pour vous";
+        }
+      );
+    } else {
+      recommendedProducts.value = allProducts.slice(4, 8);
     }
-  ]
-})
+
+  } catch (error) {
+    console.error("Erreur globale Home:", error);
+  } finally {
+    loading.value = false;
+  }
+});
 </script>
