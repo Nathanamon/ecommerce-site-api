@@ -1,54 +1,54 @@
 <template>
-  <section class="mt-20">
-    <div class="bg-white rounded-3xl shadow-xl p-12 border border-neutral-100">
-      <h2 class="text-3xl font-black text-neutral-900 mb-8">Avis clients</h2>
+  <section class="mt-24">
+    <div class="bg-white rounded-3xl shadow-2xl p-12 border border-neutral-100">
+      <h2 class="text-4xl md:text-5xl font-black text-neutral-900 mb-12 tracking-tight">Avis clients</h2>
       
       <!-- Résumé des notes -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
-        <div>
-          <div class="flex items-center mb-6">
-            <div class="text-5xl font-black text-neutral-900 mr-6">{{ averageRating }}/5</div>
-            <div class="flex text-yellow-400 text-3xl">
-              <span v-for="star in 5" :key="star">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16 pb-16 border-b border-neutral-100">
+        <div class="flex items-center gap-8">
+          <div class="text-7xl font-black text-neutral-900">{{ averageRating }}</div>
+          <div>
+            <div class="flex text-yellow-400 text-3xl mb-2">
+              <span v-for="star in 5" :key="star" class="drop-shadow-md">
                 {{ star <= Math.round(averageRating) ? '★' : '☆' }}
               </span>
             </div>
+            <p class="text-neutral-600 text-lg font-semibold">{{ reviews.length }} avis</p>
           </div>
-          <p class="text-neutral-600 text-lg font-medium">{{ reviews.length }} avis</p>
         </div>
         
         <!-- Répartition des notes -->
-        <div class="space-y-4">
-          <div v-for="rating in 5" :key="rating" class="flex items-center">
-            <span class="w-16 text-base text-neutral-600 font-medium">{{ rating }} étoile{{ rating > 1 ? 's' : '' }}</span>
-            <div class="flex-1 bg-neutral-200 rounded-full h-3 mx-4">
+        <div class="space-y-3">
+          <div v-for="rating in [5, 4, 3, 2, 1]" :key="rating" class="flex items-center gap-4">
+            <span class="w-20 text-sm text-neutral-600 font-semibold">{{ rating }} étoile{{ rating > 1 ? 's' : '' }}</span>
+            <div class="flex-1 bg-neutral-100 rounded-full h-3 overflow-hidden">
               <div 
-                class="bg-yellow-400 h-3 rounded-full transition-all duration-1000" 
+                class="bg-gradient-to-r from-yellow-400 to-yellow-500 h-3 rounded-full transition-all duration-1000 shadow-sm" 
                 :style="{ width: `${ratingDistribution[rating] || 0}%` }"
               ></div>
             </div>
-            <span class="w-16 text-base text-neutral-600 font-medium">{{ ratingDistribution[rating] || 0 }}%</span>
+            <span class="w-16 text-sm text-neutral-600 font-semibold text-right">{{ ratingDistribution[rating] || 0 }}%</span>
           </div>
         </div>
       </div>
 
       <!-- Liste des avis -->
-      <div class="space-y-8">
+      <div class="space-y-8 mb-12">
         <div 
           v-for="review in reviews" 
           :key="review.id"
-          class="border-b border-neutral-200 pb-8 last:border-0"
+          class="pb-8 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 -mx-6 px-6 rounded-2xl transition-all duration-300"
         >
           <div class="flex justify-between items-start mb-4">
             <div>
-              <h4 class="font-bold text-xl text-neutral-900">{{ review.user }}</h4>
-              <div class="flex items-center mt-2">
+              <h4 class="font-bold text-xl text-neutral-900 mb-2">{{ review.user }}</h4>
+              <div class="flex items-center gap-3">
                 <div class="flex text-yellow-400 text-lg">
-                  <span v-for="star in 5" :key="star">
+                  <span v-for="star in 5" :key="star" class="drop-shadow-sm">
                     {{ star <= review.rating ? '★' : '☆' }}
                   </span>
                 </div>
-                <span class="text-base text-neutral-600 ml-3 font-medium">{{ formatDate(review.date) }}</span>
+                <span class="text-sm text-neutral-500 font-medium">{{ formatDate(review.date) }}</span>
               </div>
             </div>
           </div>
@@ -57,29 +57,32 @@
       </div>
 
       <!-- Bouton pour ajouter un avis -->
-      <div class="mt-12 pt-8 border-t border-neutral-200">
+      <div class="mt-12 pt-12 border-t border-neutral-200">
         <button 
           @click="showReviewForm = !showReviewForm"
-          class="bg-neutral-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-neutral-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+          class="bg-neutral-900 text-white px-10 py-4 rounded-full font-bold hover:bg-neutral-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 inline-flex items-center gap-3"
         >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
           {{ showReviewForm ? 'Annuler' : 'Ajouter un avis' }}
         </button>
 
         <!-- Formulaire d'avis -->
-        <div v-if="showReviewForm" class="mt-8 p-8 bg-neutral-50 rounded-2xl">
-          <h3 class="text-xl font-bold mb-6 text-neutral-900">Donnez votre avis</h3>
-          <form @submit.prevent="submitReview">
+        <div v-if="showReviewForm" class="mt-10 p-10 bg-gradient-to-br from-neutral-50 to-neutral-100/50 rounded-3xl border border-neutral-200">
+          <h3 class="text-2xl font-bold mb-8 text-neutral-900">Donnez votre avis</h3>
+          <div @submit.prevent="submitReview">
             <!-- Note -->
-            <div class="mb-6">
+            <div class="mb-8">
               <label class="block text-lg font-bold text-neutral-900 mb-4">Votre note</label>
-              <div class="flex space-x-2">
+              <div class="flex gap-3">
                 <button 
                   v-for="star in 5" 
                   :key="star"
                   type="button"
                   @click="newReview.rating = star"
-                  class="text-4xl focus:outline-none transition-transform hover:scale-110"
-                  :class="star <= newReview.rating ? 'text-yellow-400' : 'text-neutral-300'"
+                  class="text-5xl focus:outline-none transition-all duration-300 hover:scale-125"
+                  :class="star <= newReview.rating ? 'text-yellow-400 drop-shadow-lg' : 'text-neutral-300'"
                 >
                   ★
                 </button>
@@ -87,25 +90,29 @@
             </div>
 
             <!-- Commentaire -->
-            <div class="mb-6">
+            <div class="mb-8">
               <label for="comment" class="block text-lg font-bold text-neutral-900 mb-4">Votre commentaire</label>
               <textarea 
                 id="comment"
                 v-model="newReview.comment"
-                rows="5"
-                class="w-full px-4 py-3 border-2 border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-neutral-900 transition-all duration-300"
+                rows="6"
+                class="w-full px-6 py-4 bg-white border-2 border-neutral-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-neutral-900 transition-all duration-300 placeholder-neutral-400 resize-none"
                 placeholder="Partagez votre expérience avec ce produit..."
               ></textarea>
             </div>
 
             <button 
-              type="submit"
+              type="button"
+              @click="submitReview"
               :disabled="!newReview.rating || !newReview.comment"
-              class="bg-neutral-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-neutral-800 disabled:bg-neutral-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg"
+              class="bg-neutral-900 text-white px-10 py-4 rounded-full font-bold hover:bg-neutral-800 disabled:bg-neutral-300 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 disabled:hover:scale-100 inline-flex items-center gap-3"
             >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
               Publier mon avis
             </button>
-          </form>
+          </div>
         </div>
       </div>
     </div>

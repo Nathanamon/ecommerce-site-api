@@ -1,141 +1,150 @@
 <template>
-  <div class="min-h-screen bg-white">
+  <div class="min-h-screen bg-gradient-to-b from-white to-neutral-50">
     <AppHeader />
     
-    <main class="container mx-auto px-6 py-12">
-      <!-- En-tête modifié -->
-      <div class="mb-12 text-center">
-        <h1 class="text-5xl font-black text-neutral-900 mb-4">Notre Collection</h1>
-        <p class="text-neutral-600 text-xl" v-if="!loading">
-          Découvrez notre sélection complète de {{ filteredProducts.length }} produits
-          <span v-if="searchQuery" class="text-neutral-900 font-semibold">
+    <main class="container mx-auto px-8 py-16">
+      <!-- En-tête -->
+      <div class="mb-16 text-center">
+        <h1 class="text-6xl md:text-7xl font-black text-neutral-900 mb-6 tracking-tighter">Notre Collection</h1>
+        <p class="text-neutral-600 text-xl max-w-2xl mx-auto" v-if="!loading">
+          Découvrez notre sélection complète de <span class="font-bold text-neutral-900">{{ filteredProducts.length }}</span> produits
+          <span v-if="searchQuery" class="block mt-2 text-neutral-900 font-semibold">
             pour "{{ searchQuery }}"
           </span>
         </p>
+        <div class="w-24 h-1.5 bg-neutral-900 mx-auto rounded-full mt-6"></div>
       </div>
 
-      <div class="flex flex-col lg:flex-row gap-12">
+      <div class="flex flex-col lg:flex-row gap-10">
         <!-- Sidebar des filtres -->
         <aside class="lg:w-80 flex-shrink-0">
-          <div class="bg-white rounded-2xl shadow-lg p-8 sticky top-24 border border-neutral-100">
-            <h3 class="font-black text-2xl mb-8 text-neutral-900">Filtres</h3>
+          <div class="bg-white rounded-3xl shadow-xl p-8 sticky top-24 border border-neutral-100">
+            <h3 class="font-black text-2xl mb-8 text-neutral-900 tracking-tight">Filtres</h3>
             
             <!-- Filtre par prix -->
-            <div class="mb-8">
-              <h4 class="font-bold text-lg mb-4 text-neutral-900">Prix</h4>
+            <div class="mb-8 pb-8 border-b border-neutral-100">
+              <h4 class="font-bold text-lg mb-5 text-neutral-900">Prix</h4>
               <div class="space-y-3">
-                <label class="flex items-center group cursor-pointer">
+                <label class="flex items-center group cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors duration-300">
                   <input 
                     type="radio" 
                     v-model="priceRange" 
                     value="all" 
-                    class="mr-3 w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+                    class="mr-3 w-5 h-5 text-neutral-900 focus:ring-neutral-900 focus:ring-2"
                   >
-                  <span class="group-hover:text-neutral-900 transition-colors">Tous les prix</span>
+                  <span class="text-neutral-700 group-hover:text-neutral-900 font-medium transition-colors">Tous les prix</span>
                 </label>
-                <label class="flex items-center group cursor-pointer">
+                <label class="flex items-center group cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors duration-300">
                   <input 
                     type="radio" 
                     v-model="priceRange" 
                     value="0-50" 
-                    class="mr-3 w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+                    class="mr-3 w-5 h-5 text-neutral-900 focus:ring-neutral-900 focus:ring-2"
                   >
-                  <span class="group-hover:text-neutral-900 transition-colors">Moins de 50€</span>
+                  <span class="text-neutral-700 group-hover:text-neutral-900 font-medium transition-colors">Moins de 50€</span>
                 </label>
-                <label class="flex items-center group cursor-pointer">
+                <label class="flex items-center group cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors duration-300">
                   <input 
                     type="radio" 
                     v-model="priceRange" 
                     value="50-100" 
-                    class="mr-3 w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+                    class="mr-3 w-5 h-5 text-neutral-900 focus:ring-neutral-900 focus:ring-2"
                   >
-                  <span class="group-hover:text-neutral-900 transition-colors">50€ - 100€</span>
+                  <span class="text-neutral-700 group-hover:text-neutral-900 font-medium transition-colors">50€ - 100€</span>
                 </label>
-                <label class="flex items-center group cursor-pointer">
+                <label class="flex items-center group cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors duration-300">
                   <input 
                     type="radio" 
                     v-model="priceRange" 
                     value="100-500" 
-                    class="mr-3 w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+                    class="mr-3 w-5 h-5 text-neutral-900 focus:ring-neutral-900 focus:ring-2"
                   >
-                  <span class="group-hover:text-neutral-900 transition-colors">100€ - 500€</span>
+                  <span class="text-neutral-700 group-hover:text-neutral-900 font-medium transition-colors">100€ - 500€</span>
                 </label>
-                <label class="flex items-center group cursor-pointer">
+                <label class="flex items-center group cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors duration-300">
                   <input 
                     type="radio" 
                     v-model="priceRange" 
                     value="500+" 
-                    class="mr-3 w-4 h-4 text-neutral-900 focus:ring-neutral-900"
+                    class="mr-3 w-5 h-5 text-neutral-900 focus:ring-neutral-900 focus:ring-2"
                   >
-                  <span class="group-hover:text-neutral-900 transition-colors">Plus de 500€</span>
+                  <span class="text-neutral-700 group-hover:text-neutral-900 font-medium transition-colors">Plus de 500€</span>
                 </label>
               </div>
             </div>
 
             <!-- Filtre par note -->
-            <div class="mb-8">
-              <h4 class="font-bold text-lg mb-4 text-neutral-900">Note minimum</h4>
-              <div class="flex items-center space-x-2">
+            <div class="mb-8 pb-8 border-b border-neutral-100">
+              <h4 class="font-bold text-lg mb-5 text-neutral-900">Note minimum</h4>
+              <div class="flex items-center gap-2">
                 <span 
                   v-for="star in 5" 
                   :key="star"
                   @click="setMinRating(star)"
-                  class="cursor-pointer text-3xl transition-transform hover:scale-110"
-                  :class="star <= minRating ? 'text-yellow-400' : 'text-neutral-300'"
+                  class="cursor-pointer text-4xl transition-all duration-300 hover:scale-125"
+                  :class="star <= minRating ? 'text-yellow-400 drop-shadow-lg' : 'text-neutral-200'"
                 >
                   ★
                 </span>
-                <span class="text-sm text-neutral-600 ml-3 font-medium">& plus</span>
               </div>
+              <span class="text-sm text-neutral-500 mt-3 block font-medium">{{ minRating > 0 ? minRating + ' étoile(s) & plus' : 'Toutes les notes' }}</span>
             </div>
 
             <!-- Filtre par stock -->
-            <div>
-              <label class="flex items-center group cursor-pointer">
+            <div class="mb-4">
+              <label class="flex items-center group cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors duration-300">
                 <input 
                   type="checkbox" 
                   v-model="inStockOnly" 
-                  class="mr-3 w-4 h-4 text-neutral-900 rounded focus:ring-neutral-900"
+                  class="mr-3 w-5 h-5 text-neutral-900 rounded-lg focus:ring-neutral-900 focus:ring-2"
                 >
-                <span class="group-hover:text-neutral-900 transition-colors font-medium">En stock seulement</span>
+                <span class="text-neutral-700 group-hover:text-neutral-900 font-semibold transition-colors">En stock seulement</span>
               </label>
             </div>
+
+            <!-- Bouton reset -->
+            <button 
+              @click="resetFilters"
+              class="w-full mt-6 bg-neutral-100 text-neutral-900 py-3 rounded-xl font-bold hover:bg-neutral-200 transition-all duration-300"
+            >
+              Réinitialiser
+            </button>
           </div>
         </aside>
 
         <!-- Contenu principal -->
         <div class="flex-1">
           <!-- Barre de tri -->
-          <div class="bg-white rounded-2xl shadow-lg p-6 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border border-neutral-100">
-            <div class="flex items-center space-x-4">
+          <div class="bg-white rounded-3xl shadow-xl p-6 mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border border-neutral-100">
+            <div class="flex items-center gap-4">
               <select 
                 v-model="sortBy"
-                class="border-2 border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-neutral-900 transition-all duration-300 font-medium"
+                class="border-2 border-neutral-200 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-neutral-900 transition-all duration-300 font-semibold text-neutral-900 bg-white cursor-pointer hover:border-neutral-400"
               >
-                <option value="name">Trier par : Nom</option>
-                <option value="price_asc">Prix : Croissant</option>
-                <option value="price_desc">Prix : Décroissant</option>
+                <option value="name">Nom (A-Z)</option>
+                <option value="price_asc">Prix croissant</option>
+                <option value="price_desc">Prix décroissant</option>
                 <option value="rating">Meilleures notes</option>
               </select>
             </div>
             
             <!-- Vue (grille/liste) -->
-            <div class="flex items-center space-x-2 bg-neutral-100 p-1 rounded-xl">
+            <div class="flex items-center gap-2 bg-neutral-100 p-2 rounded-2xl">
               <button 
                 @click="viewMode = 'grid'"
                 class="p-3 rounded-xl transition-all duration-300"
-                :class="viewMode === 'grid' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'"
+                :class="viewMode === 'grid' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-500 hover:text-neutral-900'"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm8-8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
                 </svg>
               </button>
               <button 
                 @click="viewMode = 'list'"
                 class="p-3 rounded-xl transition-all duration-300"
-                :class="viewMode === 'list' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-600 hover:text-neutral-900'"
+                :class="viewMode === 'list' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-500 hover:text-neutral-900'"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
               </button>
@@ -143,9 +152,12 @@
           </div>
 
           <!-- État de chargement -->
-          <div v-if="loading" class="text-center py-20">
-            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-neutral-900 mx-auto"></div>
-            <p class="mt-6 text-neutral-600 text-lg">Chargement des produits...</p>
+          <div v-if="loading" class="text-center py-32">
+            <div class="relative inline-flex items-center justify-center">
+              <div class="animate-spin rounded-full h-20 w-20 border-4 border-neutral-200 border-t-neutral-900"></div>
+              <div class="absolute animate-ping rounded-full h-16 w-16 border-2 border-neutral-300 opacity-20"></div>
+            </div>
+            <p class="mt-8 text-neutral-600 text-lg font-medium">Chargement des produits...</p>
           </div>
 
           <!-- Produits -->
@@ -154,7 +166,7 @@
             :class="[
               'gap-8',
               viewMode === 'grid' 
-                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' 
+                ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' 
                 : 'flex flex-col'
             ]"
           >
@@ -167,21 +179,32 @@
           </div>
 
           <!-- Message aucun produit -->
-          <div v-if="!loading && sortedProducts.length === 0" class="text-center py-20">
-            <p class="text-neutral-600 text-xl mb-4">
-              <span v-if="searchQuery">
-                Aucun produit ne correspond à "{{ searchQuery }}"
-              </span>
-              <span v-else>
-                Aucun produit ne correspond à vos critères.
-              </span>
-            </p>
-            <button 
-              @click="resetFilters"
-              class="bg-neutral-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-neutral-800 transition-all duration-300"
-            >
-              Réinitialiser les filtres
-            </button>
+          <div v-if="!loading && sortedProducts.length === 0" class="text-center py-32">
+            <div class="max-w-md mx-auto">
+              <div class="w-32 h-32 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-8">
+                <svg class="w-16 h-16 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <p class="text-neutral-900 text-2xl font-bold mb-3">
+                <span v-if="searchQuery">
+                  Aucun produit pour "{{ searchQuery }}"
+                </span>
+                <span v-else>
+                  Aucun produit trouvé
+                </span>
+              </p>
+              <p class="text-neutral-600 mb-8">Essayez de modifier vos critères de recherche</p>
+              <button 
+                @click="resetFilters"
+                class="bg-neutral-900 text-white px-10 py-4 rounded-full font-bold hover:bg-neutral-800 transition-all duration-300 shadow-lg hover:shadow-xl inline-flex items-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Réinitialiser les filtres
+              </button>
+            </div>
           </div>
         </div>
       </div>
