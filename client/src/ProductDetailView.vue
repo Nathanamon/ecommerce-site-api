@@ -1,23 +1,23 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white">
     <AppHeader />
     
     <!-- État de chargement -->
-    <div v-if="loading" class="container mx-auto px-4 py-8">
-      <div class="text-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-        <p class="mt-4 text-gray-600">Chargement du produit...</p>
+    <div v-if="loading" class="container mx-auto px-6 py-16">
+      <div class="text-center py-20">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-neutral-900 mx-auto"></div>
+        <p class="mt-6 text-neutral-600 text-lg">Chargement du produit...</p>
       </div>
     </div>
 
     <!-- Produit non trouvé -->
-    <div v-else-if="!product" class="container mx-auto px-4 py-8">
-      <div class="text-center py-12">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">Produit non trouvé</h2>
-        <p class="text-gray-600 mb-6">Le produit que vous recherchez n'existe pas.</p>
+    <div v-else-if="!product" class="container mx-auto px-6 py-16">
+      <div class="text-center py-20">
+        <h2 class="text-3xl font-black text-neutral-900 mb-6">Produit non trouvé</h2>
+        <p class="text-neutral-600 mb-8 text-lg">Le produit que vous recherchez n'existe pas.</p>
         <router-link 
           to="/products" 
-          class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+          class="bg-neutral-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-neutral-800 transition-all duration-300 shadow-lg"
         >
           Voir tous les produits
         </router-link>
@@ -25,40 +25,40 @@
     </div>
 
     <!-- Produit trouvé -->
-    <main v-else class="container mx-auto px-4 py-8">
+    <main v-else class="container mx-auto px-6 py-12">
       <!-- Fil d'Ariane -->
-      <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-6">
-        <router-link to="/" class="hover:text-indigo-600">Accueil</router-link>
-        <span>></span>
-        <router-link to="/products" class="hover:text-indigo-600">Produits</router-link>
-        <span>></span>
-        <span class="text-gray-900">{{ product.name }}</span>
+      <nav class="flex items-center space-x-3 text-sm text-neutral-600 mb-8 font-medium">
+        <router-link to="/" class="hover:text-neutral-900 transition-colors">Accueil</router-link>
+        <span class="text-neutral-400">›</span>
+        <router-link to="/products" class="hover:text-neutral-900 transition-colors">Produits</router-link>
+        <span class="text-neutral-400">›</span>
+        <span class="text-neutral-900 font-semibold">{{ product.name }}</span>
       </nav>
 
-      <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
+      <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-neutral-100">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 p-12">
           <!-- Galerie d'images -->
           <div>
-            <div class="relative rounded-lg overflow-hidden mb-4">
+            <div class="relative rounded-2xl overflow-hidden mb-6 bg-neutral-50">
               <img 
                 :src="mainImage" 
                 :alt="product.name"
-                class="w-full h-96 object-cover"
+                class="w-full h-[500px] object-cover"
               />
               <!-- Badge promotion -->
-              <div v-if="product.discount" class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              <div v-if="product.discount" class="absolute top-6 left-6 bg-red-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-xl">
                 -{{ product.discount }}%
               </div>
             </div>
             
             <!-- Miniatures -->
-            <div class="flex space-x-2 overflow-x-auto">
+            <div class="flex space-x-3 overflow-x-auto pb-2">
               <button 
                 v-for="(image, index) in product.images" 
                 :key="index"
                 @click="mainImage = image"
-                class="flex-shrink-0 w-20 h-20 border-2 rounded-lg overflow-hidden"
-                :class="mainImage === image ? 'border-indigo-600' : 'border-gray-300'"
+                class="flex-shrink-0 w-20 h-20 border-2 rounded-xl overflow-hidden transition-all duration-300"
+                :class="mainImage === image ? 'border-neutral-900 shadow-md' : 'border-neutral-200 hover:border-neutral-400'"
               >
                 <img 
                   :src="image" 
@@ -70,53 +70,53 @@
           </div>
 
           <!-- Informations du produit -->
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ product.name }}</h1>
+          <div class="flex flex-col justify-center">
+            <h1 class="text-4xl font-black text-neutral-900 mb-6 leading-tight">{{ product.name }}</h1>
             
             <!-- Avis et note -->
-            <div class="flex items-center mb-4">
+            <div class="flex items-center mb-6">
               <div class="flex items-center">
-                <div class="flex text-yellow-400 text-lg">
+                <div class="flex text-yellow-400 text-xl">
                   <span v-for="star in 5" :key="star">
                     {{ star <= Math.round(product.rating) ? '★' : '☆' }}
                   </span>
                 </div>
-                <span class="ml-2 text-gray-600">{{ product.rating }}/5 ({{ product.reviewCount }} avis)</span>
+                <span class="ml-3 text-neutral-600 font-medium">{{ product.rating }}/5 ({{ product.reviewCount }} avis)</span>
               </div>
             </div>
 
             <!-- Prix -->
-            <div class="mb-6">
-              <div class="flex items-baseline space-x-2">
-                <span class="text-3xl font-bold text-gray-900">{{ product.price }}€</span>
-                <span v-if="product.originalPrice" class="text-xl text-gray-500 line-through">
+            <div class="mb-8">
+              <div class="flex items-baseline space-x-4">
+                <span class="text-4xl font-black text-neutral-900">{{ product.price }}€</span>
+                <span v-if="product.originalPrice" class="text-2xl text-neutral-500 line-through">
                   {{ product.originalPrice }}€
                 </span>
-                <span v-if="product.discount" class="text-green-600 font-semibold">
+                <span v-if="product.discount" class="text-green-600 font-bold text-lg">
                   Économisez {{ product.originalPrice - product.price }}€ !
                 </span>
               </div>
             </div>
 
             <!-- Description -->
-            <div class="mb-6">
-              <h3 class="font-semibold text-lg mb-2">Description</h3>
-              <p class="text-gray-700 leading-relaxed">{{ product.description }}</p>
+            <div class="mb-8">
+              <h3 class="font-bold text-xl mb-4 text-neutral-900">Description</h3>
+              <p class="text-neutral-700 leading-relaxed text-lg">{{ product.description }}</p>
             </div>
 
             <!-- Options (couleur, taille, etc.) -->
-            <div class="mb-6" v-if="product.options && product.options.length > 0">
-              <div v-for="option in product.options" :key="option.name" class="mb-4">
-                <h4 class="font-medium mb-2">{{ option.name }}</h4>
-                <div class="flex flex-wrap gap-2">
+            <div class="mb-8" v-if="product.options && product.options.length > 0">
+              <div v-for="option in product.options" :key="option.name" class="mb-6">
+                <h4 class="font-bold text-lg mb-3 text-neutral-900">{{ option.name }}</h4>
+                <div class="flex flex-wrap gap-3">
                   <button 
                     v-for="value in option.values" 
                     :key="value"
                     @click="selectOption(option.name, value)"
-                    class="px-4 py-2 border rounded-lg transition-colors"
+                    class="px-5 py-3 border-2 rounded-xl transition-all duration-300 font-medium"
                     :class="selectedOptions[option.name] === value 
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
-                      : 'border-gray-300 hover:border-gray-400'"
+                      ? 'border-neutral-900 bg-neutral-900 text-white' 
+                      : 'border-neutral-300 hover:border-neutral-900 text-neutral-700'"
                   >
                     {{ value }}
                   </button>
@@ -125,35 +125,35 @@
             </div>
 
             <!-- Stock et quantité -->
-            <div class="mb-6">
-              <div class="flex items-center justify-between mb-4">
-                <span class="font-medium">Quantité</span>
-                <div class="flex items-center space-x-3">
+            <div class="mb-8">
+              <div class="flex items-center justify-between mb-6">
+                <span class="font-bold text-lg text-neutral-900">Quantité</span>
+                <div class="flex items-center space-x-4">
                   <button 
                     @click="decreaseQuantity"
                     :disabled="quantity <= 1"
-                    class="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="w-10 h-10 rounded-xl border-2 border-neutral-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:border-neutral-900 transition-colors"
                   >
-                    -
+                    <span class="text-lg font-bold">-</span>
                   </button>
-                  <span class="w-8 text-center">{{ quantity }}</span>
+                  <span class="w-12 text-center text-xl font-bold">{{ quantity }}</span>
                   <button 
                     @click="increaseQuantity"
                     :disabled="quantity >= product.stock"
-                    class="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="w-10 h-10 rounded-xl border-2 border-neutral-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:border-neutral-900 transition-colors"
                   >
-                    +
+                    <span class="text-lg font-bold">+</span>
                   </button>
                 </div>
               </div>
 
               <!-- Statut du stock -->
-              <div class="mb-4">
-                <span v-if="product.stock > 10" class="text-green-600 font-medium">✓ En stock</span>
-                <span v-else-if="product.stock > 0" class="text-orange-600 font-medium">
+              <div class="mb-6">
+                <span v-if="product.stock > 10" class="text-green-600 font-bold text-lg">✓ En stock</span>
+                <span v-else-if="product.stock > 0" class="text-orange-600 font-bold text-lg">
                   ⚠ Plus que {{ product.stock }} en stock !
                 </span>
-                <span v-else class="text-red-600 font-medium">✗ Rupture de stock</span>
+                <span v-else class="text-red-600 font-bold text-lg">✗ Rupture de stock</span>
               </div>
             </div>
 
@@ -162,31 +162,31 @@
               <button 
                 @click="addToCart"
                 :disabled="product.stock === 0"
-                class="flex-1 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                class="flex-1 bg-neutral-900 text-white py-4 px-8 rounded-xl font-bold hover:bg-neutral-800 disabled:bg-neutral-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center"
               >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
                 Ajouter au panier
               </button>
               <button 
-                class="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                class="px-8 py-4 border-2 border-neutral-300 rounded-xl font-bold hover:border-neutral-900 hover:bg-neutral-50 transition-all duration-300"
               >
-                ♡
+                <span class="text-xl">❤</span>
               </button>
             </div>
 
             <!-- Livraison et retours -->
-            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-              <div class="flex items-center space-x-4 text-sm text-gray-600">
+            <div class="mt-8 p-6 bg-neutral-50 rounded-2xl">
+              <div class="flex items-center justify-center space-x-8 text-sm text-neutral-600 font-medium">
                 <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                   Livraison gratuite
                 </div>
                 <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                   Retours sous 30 jours
@@ -201,8 +201,8 @@
       <ReviewSection :product-id="product.id" :reviews="product.reviews" />
 
       <!-- Produits recommandés -->
-      <section class="mt-12">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">Produits similaires</h2>
+      <section class="mt-16">
+        <h2 class="text-3xl font-black text-neutral-900 mb-8">Produits similaires</h2>
         <ProductGrid 
           :products="recommendedProducts"
           :loading="false"

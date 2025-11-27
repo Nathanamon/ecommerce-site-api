@@ -1,20 +1,20 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white">
     <AppHeader />
     
     <main>
       <!-- Bannière Hero -->
-      <section class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white py-20">
-        <div class="container mx-auto px-4 text-center">
-          <h1 class="text-5xl font-bold mb-6">Bienvenue chez EcoMarket</h1>
-          <p class="text-xl mb-8 max-w-2xl mx-auto">
-            Découvrez notre sélection exclusive de produits soigneusement choisis pour vous.
+      <section class="bg-gradient-to-br from-neutral-900 to-neutral-800 text-white py-32">
+        <div class="container mx-auto px-6 text-center">
+          <h1 class="text-6xl font-black mb-8 tracking-tight">EcoMarket</h1>
+          <p class="text-xl mb-12 max-w-2xl mx-auto text-neutral-300 leading-relaxed">
+            L'excellence réinventée. Découvrez notre sélection exclusive de produits soigneusement choisis pour vous.
           </p>
           <router-link 
             to="/products" 
-            class="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors"
+            class="bg-white text-neutral-900 px-12 py-4 rounded-xl font-bold text-lg hover:bg-neutral-100 transition-all duration-300 shadow-2xl hover:shadow-xl transform hover:-translate-y-1"
           >
-            Découvrir nos produits
+            Découvrir la collection
           </router-link>
         </div>
       </section>
