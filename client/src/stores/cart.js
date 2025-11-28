@@ -2,66 +2,120 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const useCartStore = defineStore('cart', () => {
+  // State
   const items = ref([])
 
-  // Computed properties
-  const totalItems = computed(() => 
-    items.value.reduce((total, item) => total + item.quantity, 0)
-  )
+  // Getters
+  const itemCount = computed(() => {
+    return items.value.reduce((total, item) => total + item.quantity, 0)
+  })
 
-  const totalPrice = computed(() =>
-    items.value.reduce((total, item) => total + (item.price * item.quantity), 0)
-  )
+  const subtotal = computed(() => {
+    return items.value.reduce((total, item) => {
+      return total + (item.product.price * item.quantity)
+    }, 0)
+  })
 
-  const isInCart = (productId) => 
-    items.value.some(item => item.id === productId)
+  const total = computed(() => {
+    // Sous-total + TVA (20%)
+    return subtotal.value * 1.2
+  })
 
   // Actions
-  const addToCart = (product, quantity = 1, selectedOptions = {}) => {
-    const existingItem = items.value.find(item => 
-      item.id === product.id && 
-      JSON.stringify(item.selectedOptions) === JSON.stringify(selectedOptions)
-    )
+  const addToCart = (product, quantity = 1, options = {}) => {
+    // Vérifier si le produit existe déjà dans le panier
+    const existingItem = items.value.find(item => {
+      return item.product.id === product.id && 
+             JSON.stringify(item.options) === JSON.stringify(options)
+    })
 
     if (existingItem) {
+      // Si le produit existe, augmenter la quantité
       existingItem.quantity += quantity
     } else {
+      // Sinon, ajouter un nouvel item
       items.value.push({
-        ...product,
-        quantity,
-        selectedOptions,
-        addedAt: new Date().toISOString()
+        id: Date.now(), // ID unique basé sur le timestamp
+        product: product,
+        quantity: quantity,
+        options: options
       })
     }
+
+    // Sauvegarder dans le localStorage
+    saveToStorage()
   }
 
   const removeFromCart = (itemId) => {
     items.value = items.value.filter(item => item.id !== itemId)
+    saveToStorage()
   }
 
-  const updateQuantity = (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeFromCart(itemId)
-      return
+  const increaseQuantity = (itemId) => {
+    const item = items.value.find(i => i.id === itemId)
+    if (item && item.quantity < item.product.stock) {
+      item.quantity++
+      saveToStorage()
     }
+  }
 
-    const item = items.value.find(item => item.id === itemId)
+  const decreaseQuantity = (itemId) => {
+    const item = items.value.find(i => i.id === itemId)
     if (item) {
-      item.quantity = newQuantity
+      if (item.quantity > 1) {
+        item.quantity--
+        saveToStorage()
+      } else {
+        removeFromCart(itemId)
+      }
+    }
+  }
+
+  const updateQuantity = (itemId, quantity) => {
+    const item = items.value.find(i => i.id === itemId)
+    if (item) {
+      if (quantity <= 0) {
+        removeFromCart(itemId)
+      } else if (quantity <= item.product.stock) {
+        item.quantity = quantity
+        saveToStorage()
+      }
     }
   }
 
   const clearCart = () => {
     items.value = []
+    saveToStorage()
   }
+
+  const saveToStorage = () => {
+    localStorage.setItem('cart', JSON.stringify(items.value))
+  }
+
+  const loadFromStorage = () => {
+    const savedCart = localStorage.getItem('cart')
+    if (savedCart) {
+      try {
+        items.value = JSON.parse(savedCart)
+      } catch (e) {
+        console.error('Erreur lors du chargement du panier:', e)
+        items.value = []
+      }
+    }
+  }
+
+  // Charger le panier au démarrage
+  loadFromStorage()
 
   return {
     items,
-    totalItems,
-    totalPrice,
-    isInCart,
+    itemCount,
+    subtotal,
+    total,
     addToCart,
     removeFromCart,
+    increaseQuantity,
+    decreaseQuantity,
     updateQuantity,
     clearCart
   }

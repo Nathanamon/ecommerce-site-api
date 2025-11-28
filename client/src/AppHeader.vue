@@ -41,7 +41,8 @@
           </router-link>
 
           <!-- Icône Utilisateur -->
-          <button 
+          <router-link 
+            to="/profile"
             class="p-3 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition-all duration-300 relative group"
             aria-label="Compte utilisateur"
           >
@@ -51,10 +52,11 @@
             <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
               Compte
             </span>
-          </button>
+          </router-link>
 
           <!-- Panier -->
-          <button 
+          <router-link 
+            to="/cart"
             class="p-3 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition-all duration-300 relative group"
             aria-label="Panier"
           >
@@ -67,7 +69,7 @@
             <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
               Panier
             </span>
-          </button>
+          </router-link>
         </nav>
       </div>
     </div>
@@ -87,8 +89,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useCartStore } from './stores/cart'
+import { useAuthStore } from './stores/auth'
 
 const router = useRouter()
+const cartStore = useCartStore()
+const authStore = useAuthStore()
 const searchQuery = ref('')
 
 const performSearch = () => {
@@ -98,5 +104,17 @@ const performSearch = () => {
       query: { q: searchQuery.value.trim() }
     })
   }
+}
+
+const goToProfile = () => {
+  if (authStore.isAuthenticated) {
+    router.push('/profile')
+  } else {
+    router.push('/login')
+  }
+}
+
+const goToCart = () => {
+  router.push('/cart')
 }
 </script>
