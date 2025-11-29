@@ -2,12 +2,13 @@
 const express = require("express")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
+const requireAuth = require("../middleware/auth")
+
 
 const router = express.Router()
 
 // Clé secrète pour signer les JWT (en vrai : mettre dans .env)
-const JWT_SECRET = process.env.JWT_SECRET || "SUPER_SECRET_KEY"
-
+const JWT_SECRET = process.env.JWT_SECRET 
 // "Fake" base utilisateurs en mémoire (pour le projet, pas pour la prod)
 const users = []   // { id, name, email, passwordHash }
 
@@ -82,6 +83,14 @@ router.post("/login", async (req, res) => {
     token,
     user: userSafe
   })
+})
+
+router.get("/profile", requireAuth, (req, res) => {
+  const user = users.find(u => u.id === req.user.id)
+  if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" })
+
+  const { passwordHash, ...safeUser } = user
+  return res.json({ user: safeUser })
 })
 
 module.exports = router

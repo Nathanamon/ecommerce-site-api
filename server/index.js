@@ -6,21 +6,21 @@ const { createClient } = require('@supabase/supabase-js');
 const userRoutes = require("./routes/users")
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT ;
 
 app.use(cors());
 app.use(express.json());
 app.use("/api", userRoutes)
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
-  console.warn("⚠️ ATTENTION: Supabase non configuré. Les routes produits ne fonctionneront pas.");
+  console.warn(" ATTENTION: Supabase non configuré. Les routes produits ne fonctionneront pas.");
 }
 /*
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // Route de test
 app.get('/', (req, res) => {
-  res.send('API EcoMarket en ligne 🚀');
+  res.send('API EcoMarket en ligne ');
 });
 
 // --- ROUTE PRODUITS ---
@@ -198,12 +198,12 @@ app.get('/api/recommendations/weather', async (req, res) => {
     if (temp > 18) { // S'il fait > 18°C (Beau temps)
       // On recommande : Audio (Enceinte plage), Mobilité (Trottinette), Photo (Drone)
       categoryFilter = ['Audio', 'Mobilité', 'Photo', 'Wearables']; 
-      message = `Il fait ${Math.round(temp)}°C ☀️ ! Équipez-vous pour l'extérieur.`;
+      message = `Il fait ${Math.round(temp)}°C  ! Équipez-vous pour l'extérieur.`;
     } 
     else { // S'il fait froid / Pluie
       // On recommande : Gaming (Pack), Maison (Projecteur/Chauffage), Informatique
       categoryFilter = ['Gaming', 'Maison', 'Informatique']; 
-      message = `Il fait ${Math.round(temp)}°C 🌧️... Le moment idéal pour rester chez soi !`;
+      message = `Il fait ${Math.round(temp)}°C ... Le moment idéal pour rester chez soi !`;
     }
 
     // 3. Récupération des produits correspondants dans Supabase
