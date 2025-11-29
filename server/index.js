@@ -5,7 +5,7 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const userRoutes = require("./routes/users")
 const ordersRoutes = require("./routes/orders")
-
+const orderItemsRoutes = require("./routes/orderItems");
 
 const app = express();
 const port = process.env.PORT ;
@@ -14,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api", userRoutes)
 app.use("/api/orders", ordersRoutes)
+app.use("/api/order-items", orderItemsRoutes);
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   console.warn(" ATTENTION: Supabase non configuré. Les routes produits ne fonctionneront pas.");
