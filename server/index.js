@@ -3,13 +3,19 @@ const axios = require('axios');
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const userRoutes = require("./routes/users")
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use("/api", userRoutes)
 
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+  console.warn("⚠️ ATTENTION: Supabase non configuré. Les routes produits ne fonctionneront pas.");
+}
+/*
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // Route de test
@@ -235,7 +241,7 @@ app.get('/api/recommendations/weather', async (req, res) => {
     res.status(500).json({ error: "Impossible de récupérer la météo" });
   }
 });
-
+*/
 app.listen(port, () => {
   console.log(`Serveur prêt sur http://localhost:${port}`);
 });
