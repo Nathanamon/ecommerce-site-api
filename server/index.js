@@ -246,6 +246,7 @@ app.get('/api/recommendations/weather', async (req, res) => {
   }
 });
 
+
 app.listen(port, () => {
   console.log(`Serveur prêt sur http://localhost:${port}`);
 });
