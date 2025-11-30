@@ -152,4 +152,52 @@ router.put("/cancel/:order_id", requireAuth, async (req, res) => {
   return res.json({ message: "Commande annulée avec succès." });
 })
 
+// -------------------------------------------------------------
+// CHANGER LE STATUT D’UNE COMMANDE (suivi)
+// -------------------------------------------------------------
+router.put("/status/:order_id", requireAuth, async (req, res) => {
+  const user_id = req.user.id;
+  const order_id = req.params.order_id;
+  const { statut } = req.body;
+
+  // vérifier statut valide
+  const validStatus = [
+    "PENDING",
+    "PAID",
+    "PROCESSING",
+    "SHIPPED",
+    "OUT_FOR_DELIVERY",
+    "DELIVERED",
+    "CANCELLED"
+  ];
+
+  if (!validStatus.includes(statut)) {
+    return res.status(400).json({ message: "Statut invalide." });
+  }
+
+  // vérifier commande existe
+  const { data: order } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", order_id)
+    .single();
+
+  if (!order){
+    return res.status(404).json({ message: "Commande introuvable." });
+  }
+
+  // vérifier appartient au user
+  if(order.user_id !== user_id){
+    return res.status(403).json({ message: "Accès interdit." });
+  }
+
+  // mise à jour du statut
+  await supabase
+    .from("orders")
+    .update({ statut })
+    .eq("id", order_id);
+
+  return res.json({ message: `Statut de la commande mis à jour en : ${statut}` });
+});
+
 module.exports = router;
