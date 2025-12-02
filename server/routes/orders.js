@@ -1,36 +1,35 @@
-// server/routes/orders.js
-const express = require("express")
-const requireAuth = require("../middleware/auth")
-const supabase = require("../supabaseClient")
+const express = require("express");
+const requireAuth = require("../middleware/auth");
+const supabase = require("../supabaseClient");
 
-const router = express.Router()
+const router = express.Router();
 
-// -------------------------------------------------------------
-// Helper — check if user is deleted
-// -------------------------------------------------------------
+// ========================================================
+// UTIL
+// ========================================================
 async function isUserDeleted(userId) {
   const { data: user } = await supabase
     .from("users")
     .select("deleted_at")
     .eq("id", userId)
-    .single()
+    .single();
 
-  return user && user.deleted_at !== null
+  return user && user.deleted_at !== null;
 }
 
 // -------------------------------------------------------------
 // CRÉATION COMMANDE
 // -------------------------------------------------------------
 router.post("/", requireAuth, async (req, res) => {
-  const userId = req.user.id
-  const { total_amount, delivery_address } = req.body
+  const userId = req.user.id;
+  const { total_amount, delivery_address } = req.body;
 
   if (await isUserDeleted(userId)) {
-    return res.status(403).json({ message: "Votre compte est désactivé." })
+    return res.status(403).json({ message: "Votre compte est désactivé." });
   }
 
   if (!total_amount) {
-    return res.status(400).json({ message: "Le montant total est requis." })
+    return res.status(400).json({ message: "Le montant total est requis." });
   }
 
   const { data, error } = await supabase
@@ -41,37 +40,41 @@ router.post("/", requireAuth, async (req, res) => {
       delivery_address: delivery_address || "",
       statut: "PENDING"
     })
-    .select()
+    .select();
 
   if (error) {
-    console.log(error)
-    return res.status(500).json({ message: "Erreur création commande Supabase." })
+    console.log(error);
+    return res.status(500).json({ message: "Erreur création commande Supabase." });
   }
 
   return res.status(201).json({
     message: "Commande créée avec succès.",
     order: data[0]
-  })
-})
+  });
+});
 
 // -------------------------------------------------------------
 // LISTER COMMANDES UTILISATEUR
 // -------------------------------------------------------------
 router.get("/", requireAuth, async (req, res) => {
-  const userId = req.user.id
+  const userId = req.user.id;
+
+  if (await isUserDeleted(userId)) {
+    return res.status(403).json({ message: "Votre compte est désactivé." });
+  }
 
   const { data, error } = await supabase
     .from("orders")
     .select("*")
-    .eq("user_id", userId)
+    .eq("user_id", userId);
 
   if (error) {
-    console.log(error)
-    return res.status(500).json({ message: "Erreur récupération commandes." })
+    console.log(error);
+    return res.status(500).json({ message: "Erreur récupération commandes." });
   }
 
-  return res.json({ orders: data })
-})
+  return res.json({ orders: data });
+});
 
 // -------------------------------------------------------------
 // MODIFIER UNE COMMANDE
@@ -82,7 +85,7 @@ router.put("/update/:order_id", requireAuth, async (req, res) => {
   const { statut, delivery_address } = req.body;
 
   if (await isUserDeleted(user_id)) {
-    return res.status(403).json({ message: "Votre compte est désactivé." })
+    return res.status(403).json({ message: "Votre compte est désactivé." });
   }
 
   const { data: order } = await supabase
@@ -123,7 +126,7 @@ router.put("/cancel/:order_id", requireAuth, async (req, res) => {
   const order_id = req.params.order_id;
 
   if (await isUserDeleted(user_id)) {
-    return res.status(403).json({ message: "Votre compte est désactivé." })
+    return res.status(403).json({ message: "Votre compte a été désactivé." });
   }
 
   const { data: order } = await supabase
@@ -144,13 +147,42 @@ router.put("/cancel/:order_id", requireAuth, async (req, res) => {
     return res.status(400).json({ message: "Impossible d'annuler — commande déjà expédiée ou livrée." });
   }
 
+  // -- si la commande était PAYÉE → remboursement --
+  if (order.payment_status === "PAID") {
+    await supabase
+      .from("payments")
+      .insert({
+        order_id,
+        user_id,
+        amount: order.total_amount,
+        statut: "REFUNDED",
+        payment_method: "REFUND",
+        transaction_id: `REFUND-${Date.now()}`
+      });
+
+    await supabase
+      .from("orders")
+      .update({ 
+        payment_status: "REFUNDED",
+        statut: "CANCELLED"
+      })
+      .eq("id", order_id);
+
+    return res.json({ message: "Commande annulée et remboursée avec succès." });
+  }
+
+  // -- sinon : commande juste annulée (pas payée) --
   await supabase
     .from("orders")
-    .update({ statut: "CANCELLED" })
+    .update({ 
+      statut: "CANCELLED",
+      payment_status: "FAILED" // ou UNPAID ?
+    })
     .eq("id", order_id);
 
   return res.json({ message: "Commande annulée avec succès." });
-})
+});
+
 
 // -------------------------------------------------------------
 // CHANGER LE STATUT D’UNE COMMANDE (suivi)
@@ -160,7 +192,10 @@ router.put("/status/:order_id", requireAuth, async (req, res) => {
   const order_id = req.params.order_id;
   const { statut } = req.body;
 
-  // vérifier statut valide
+  if (await isUserDeleted(user_id)) {
+    return res.status(403).json({ message: "Votre compte est désactivé." });
+  }
+
   const validStatus = [
     "PENDING",
     "PAID",
@@ -175,23 +210,20 @@ router.put("/status/:order_id", requireAuth, async (req, res) => {
     return res.status(400).json({ message: "Statut invalide." });
   }
 
-  // vérifier commande existe
   const { data: order } = await supabase
     .from("orders")
     .select("*")
     .eq("id", order_id)
     .single();
 
-  if (!order){
+  if (!order) {
     return res.status(404).json({ message: "Commande introuvable." });
   }
 
-  // vérifier appartient au user
-  if(order.user_id !== user_id){
+  if (order.user_id !== user_id) {
     return res.status(403).json({ message: "Accès interdit." });
   }
 
-  // mise à jour du statut
   await supabase
     .from("orders")
     .update({ statut })
@@ -201,3 +233,4 @@ router.put("/status/:order_id", requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+

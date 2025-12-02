@@ -26,11 +26,11 @@ const VALID_PAYMENT_METHODS = [
   "GOOGLE_PAY",
   "BANK_TRANSFER",
   "CASH",
-  "INSTALMENT" // paiements en plusieurs fois
+  "INSTALMENT"
 ];
 
 // ========================
-//  UTIL FUNCTIONS
+//  UTIL FUNCTION
 // ========================
 async function isUserDeleted(userId) {
   const { data: user } = await supabase
@@ -50,12 +50,12 @@ router.post("/", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const { order_id, amount, method, status } = req.body;
 
-  if (!order_id || !amount) {
-    return res.status(400).json({ message: "order_id et amount sont requis." });
+  if (await isUserDeleted(userId)) {
+    return res.status(403).json({ message: "Ce compte a été désactivé." });
   }
 
-  if (await isUserDeleted(userId)) {
-    return res.status(403).json({ message: "Votre compte est désactivé." });
+  if (!order_id || !amount) {
+    return res.status(400).json({ message: "order_id et amount sont requis." });
   }
 
   // 1) vérifier commande
@@ -72,6 +72,24 @@ router.post("/", requireAuth, async (req, res) => {
   // 2) vérifier ownership
   if (order.user_id !== userId) {
     return res.status(403).json({ message: "Accès interdit à cette commande." });
+  }
+
+  // 🛑 NOUVELLE RÈGLE IMPORTANTE
+  // Interdiction de payer une commande annulée, échouée ou déjà payée
+  if (order.statut === "CANCELLED") {
+    return res.status(400).json({ message: "Impossible de payer — commande annulée." });
+  }
+
+  if (order.statut === "FAILED") {
+    return res.status(400).json({ message: "Impossible de payer — commande invalide." });
+  }
+
+  if (order.statut === "REFUNDED") {
+    return res.status(400).json({ message: "Impossible de payer — commande remboursée." });
+  }
+
+  if (order.payment_status === "PAID") {
+    return res.status(400).json({ message: "Paiement déjà effectué." });
   }
 
   // 3) valider METHOD
@@ -113,9 +131,9 @@ router.post("/", requireAuth, async (req, res) => {
     return res.status(500).json({ message: "Erreur lors de l'enregistrement du paiement." });
   }
 
-
+ 
   // ========================
-  // 7) update order selon le status
+  // UPDATE ORDER STATUS
   // ========================
 
   let orderUpdate = {};
@@ -165,12 +183,18 @@ router.post("/", requireAuth, async (req, res) => {
     order_status_after_payment: orderUpdate
   });
 });
+
+
 // ========================
 //  LISTER LES PAIEMENTS D'UNE COMMANDE
 // ========================
 router.get("/order/:order_id", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const order_id = req.params.order_id;
+
+  if (await isUserDeleted(userId)) {
+    return res.status(403).json({ message: "Ce compte a été désactivé." });
+  }
 
   const { data: order } = await supabase
     .from("orders")

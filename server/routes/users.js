@@ -20,7 +20,7 @@ router.post("/register", async (req, res) => {
 
   const { data: existingUser } = await supabase
     .from("users")
-    .select("*")
+    .select("id")
     .eq("email", email)
     .single()
 
@@ -51,14 +51,18 @@ router.post("/register", async (req, res) => {
     user: data[0]
   })
 })
-//LOGIN//
+
+
+// -------------------------------------------------------------
+// LOGIN
+// -------------------------------------------------------------
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  // 1 — vérifier si cet email correspond à un original_email supprimé
+  // Vérifier si le compte a été supprimé (email d’origine)
   const { data: deletedUser } = await supabase
     .from("users")
-    .select("id, deleted_at")
+    .select("deleted_at")
     .eq("original_email", email)
     .single();
 
@@ -66,7 +70,7 @@ router.post("/login", async (req, res) => {
     return res.status(403).json({ message: "Ce compte a été supprimé." });
   }
 
-  // 2 — vérifier si utilisateur existe avec cet email actif
+  // Vérifier si utilisateur existe avec cet email
   const { data: user } = await supabase
     .from("users")
     .select("*")
@@ -77,18 +81,15 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ message: "Email incorrect." });
   }
 
-  // 3 — vérifier si user est désactivé
-  if (user.deleted_at) {
+  if (user.deleted_at !== null) {
     return res.status(403).json({ message: "Ce compte a été supprimé." });
   }
 
-  // 4 — vérifier mot de passe
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
     return res.status(401).json({ message: "Mot de passe incorrect." });
   }
 
-  // 5 — Login OK → token
   const token = jwt.sign(
     { id: user.id, email: user.email },
     JWT_SECRET,
@@ -121,30 +122,33 @@ router.get("/profile", requireAuth, async (req, res) => {
     return res.status(404).json({ message: "Utilisateur non trouvé" })
   }
 
+  if (user.deleted_at !== null) {
+    return res.status(403).json({ message: "Ce compte a été supprimé." })
+  }
+
   delete user.password_hash
 
   return res.json({ user })
 })
 
-/// -------------------------------------------------------------
+// -------------------------------------------------------------
 // UPDATE PROFILE
 // -------------------------------------------------------------
 router.put("/profile", requireAuth, async (req, res) => {
   const userId = req.user.id
   const { nom, adresse } = req.body
 
-  // 1. vérifier si compte désactivé
+  // vérifier si compte désactivé
   const { data: user } = await supabase
     .from("users")
     .select("deleted_at")
     .eq("id", userId)
     .single()
 
-  if (user.deleted_at) {
-    return res.status(403).json({ message: "Ce compte est désactivé." })
+  if (user.deleted_at !== null) {
+    return res.status(403).json({ message: "Ce compte a été supprimé." })
   }
 
-  // 2. appliquer modifications valides
   const updates = {}
   if (nom) updates.nom = nom
   if (adresse) updates.adresse = adresse
@@ -162,13 +166,13 @@ router.put("/profile", requireAuth, async (req, res) => {
   return res.json({ message: "Profil mis à jour avec succès." })
 })
 
+
 // -------------------------------------------------------------
 // DELETE ACCOUNT
 // -------------------------------------------------------------
 router.delete("/delete", requireAuth, async (req, res) => {
   const userId = req.user.id
 
-  // on récupère l'email avant anonymisation
   const { data: user } = await supabase
     .from("users")
     .select("email")
@@ -179,7 +183,7 @@ router.delete("/delete", requireAuth, async (req, res) => {
     .from("users")
     .update({
       nom: "Compte supprimé",
-      original_email: user.email,  // on sauvegarde l’ancien email !!
+      original_email: user.email,
       email: `deleted_${userId}@deleted.com`,
       adresse: "",
       password_hash: "",
@@ -195,11 +199,22 @@ router.delete("/delete", requireAuth, async (req, res) => {
   return res.json({ message: "Compte anonymisé et désactivé." })
 })
 
+
 // -------------------------------------------------------------
 // GET USER ORDERS HISTORY
 // -------------------------------------------------------------
 router.get("/orders", requireAuth, async (req, res) => {
   const userId = req.user.id
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("deleted_at")
+    .eq("id", userId)
+    .single()
+
+  if (user.deleted_at !== null) {
+    return res.status(403).json({ message: "Ce compte a été supprimé." })
+  }
 
   const { data, error } = await supabase
     .from("orders")

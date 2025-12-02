@@ -17,24 +17,22 @@ async function requireAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
 
-    // 👇 NOUVEAU : Vérifier si le compte est supprimé
+    req.user = {
+      id: decoded.id,
+      email: decoded.email
+    };
+
     const { data: user } = await supabase
       .from("users")
       .select("deleted_at")
       .eq("id", decoded.id)
       .single();
 
-    if (!user) {
-      return res.status(401).json({ message: "Utilisateur inexistant." });
-    }
+    req.user.deleted = user && user.deleted_at !== null;
 
-    if (user.deleted_at !== null) {
-      return res.status(403).json({ message: "Ce compte a été supprimé." });
-    }
+    return next();
 
-    next();
   } catch (err) {
     return res.status(401).json({ message: "Token invalide" });
   }

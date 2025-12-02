@@ -7,7 +7,7 @@ const userRoutes = require("./routes/users")
 const ordersRoutes = require("./routes/orders")
 const orderItemsRoutes = require("./routes/orderItems");
 const paymentsRoutes = require("./routes/payments");
-
+const deliveriesRoutes = require("./routes/deliveries");
 
 const app = express();
 const port = process.env.PORT ;
@@ -18,7 +18,7 @@ app.use("/api", userRoutes)
 app.use("/api/orders", ordersRoutes)
 app.use("/api/order-items", orderItemsRoutes);
 app.use("/api/payments", paymentsRoutes);
-
+app.use("/api/deliveries", deliveriesRoutes);
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   console.warn(" ATTENTION: Supabase non configuré. Les routes produits ne fonctionneront pas.");
