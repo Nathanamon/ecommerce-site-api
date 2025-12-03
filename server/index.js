@@ -8,6 +8,8 @@ const ordersRoutes = require("./routes/orders")
 const orderItemsRoutes = require("./routes/orderItems");
 const paymentsRoutes = require("./routes/payments");
 const deliveriesRoutes = require("./routes/deliveries");
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 
 const app = express();
 const port = process.env.PORT ;
@@ -26,12 +28,211 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
+// --- CONFIGURATION SWAGGER ---
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'EcoMarket API',
+      version: '1.0.0',
+      description: 'Documentation de l\'API E-commerce du projet EcoMarket',
+      contact: {
+        name: 'Support EcoMarket',
+        email: 'support@ecomarket.com'
+      },
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000/api',
+        description: 'Serveur Local',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+      schemas: {
+        // Schéma Utilisateur
+        User: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            nom: { type: 'string', example: 'Jean Dupont' },
+            email: { type: 'string', example: 'jean@example.com' },
+            adresse: { type: 'string', example: '123 Rue de Paris' },
+            telephone: { type: 'string', example: '0123456789' },
+            deleted_at: { type: 'string', format: 'date-time', nullable: true },
+            created_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        // Schéma Produit
+        Product: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'iPhone 13' },
+            price: { type: 'number', format: 'float', example: 999.99 },
+            description: { type: 'string', example: 'Smartphone Apple' },
+            category: { type: 'string', example: 'Téléphonie' },
+            image: { type: 'string', example: 'https://example.com/iphone.jpg' },
+            stock: { type: 'integer', example: 50 },
+            rating: { type: 'number', format: 'float', example: 4.5 },
+            reviewCount: { type: 'integer', example: 120 }
+          }
+        },
+        // Schéma Commande
+        Order: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            user_id: { type: 'integer', example: 1 },
+            total_amount: { type: 'number', format: 'float', example: 1199.99 },
+            delivery_address: { type: 'string', example: '123 Rue de Paris' },
+            statut: { 
+              type: 'string', 
+              enum: ['En attente', 'PAID', 'PENDING', 'FAILED', 'REFUNDED', 'CANCELLED'],
+              example: 'En attente'
+            },
+            payment_status: { 
+              type: 'string', 
+              enum: ['UNPAID', 'PAID', 'PENDING', 'FAILED', 'REFUNDED'],
+              example: 'UNPAID'
+            },
+            created_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        // Schéma Article de commande
+        OrderItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            order_id: { type: 'integer', example: 1 },
+            product_id: { type: 'integer', example: 1 },
+            quantity: { type: 'integer', example: 2 },
+            price_at_purchase: { type: 'number', format: 'float', example: 999.99 },
+            created_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        // Schéma Paiement
+        Payment: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            order_id: { type: 'integer', example: 1 },
+            transaction_id: { type: 'string', example: 'TX-123456789' },
+            amount: { type: 'number', format: 'float', example: 1199.99 },
+            statut: { 
+              type: 'string', 
+              enum: ['SUCCESS', 'FAILED', 'PENDING', 'CANCELLED', 'EXPIRED', 'REFUNDED'],
+              example: 'SUCCESS'
+            },
+            payment_method: { 
+              type: 'string', 
+              enum: ['CARD', 'PAYPAL', 'APPLE_PAY', 'GOOGLE_PAY', 'BANK_TRANSFER', 'CASH'],
+              example: 'CARD'
+            },
+            created_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        // Schéma Livraison
+        Delivery: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            order_id: { type: 'integer', example: 1 },
+            user_id: { type: 'integer', example: 1 },
+            delivery_type: { 
+              type: 'string', 
+              enum: ['HOME_DELIVERY', 'PICKUP_POINT', 'LOCKER', 'STORE_PICKUP', 'EXPRESS', 'STANDARD'],
+              example: 'HOME_DELIVERY'
+            },
+            statut: { 
+              type: 'string', 
+              enum: ['PENDING', 'SHIPPED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELAYED'],
+              example: 'PENDING'
+            },
+            tracking_number: { type: 'string', example: 'TRK-123456789' },
+            estimated_date: { type: 'string', format: 'date-time' },
+            delivered_at: { type: 'string', format: 'date-time', nullable: true }
+          }
+        },
+        // Schéma Avis
+        Review: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            product_id: { type: 'integer', example: 1 },
+            user_id: { type: 'integer', example: 1 },
+            rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 },
+            commentaire: { type: 'string', example: 'Excellent produit !' },
+            created_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        // Schéma Erreur
+        Error: {
+          type: 'object',
+          properties: {
+            error: { type: 'string', example: 'Message d\'erreur' }
+          }
+        }
+      }
+    },
+    security: [
+      {
+        bearerAuth: []
+      }
+    ],
+    tags: [
+      { name: 'Produits', description: 'Gestion des produits' },
+      { name: 'Utilisateurs', description: 'Authentification et profil utilisateur' },
+      { name: 'Commandes', description: 'Gestion des commandes' },
+      { name: 'Panier', description: 'Gestion du panier' },
+      { name: 'Paiements', description: 'Gestion des paiements' },
+      { name: 'Livraisons', description: 'Gestion des livraisons' },
+      { name: 'Météo', description: 'Recommandations basées sur la météo' }
+    ]
+  },
+  apis: ['./index.js', './routes/*.js'],
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+// Route pour afficher la doc
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+
+
 // Route de test
 app.get('/', (req, res) => {
   res.send('API EcoMarket en ligne ');
 });
 
 // --- ROUTE PRODUITS ---
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: Récupère tous les produits
+ *     tags: [Produits]
+ *     responses:
+ *       200:
+ *         description: Liste des produits
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Product'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.get('/api/products', async (req, res) => {
   try {
     // 1. On récupère les produits ET on fait une "jointure" avec les Reviews pour avoir juste les notes
@@ -81,6 +282,31 @@ app.get('/api/products', async (req, res) => {
 
 // Route Détail Produit (avec la même traduction)
 // Route Détail Produit (Vrai calcul de moyenne)
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   get:
+ *     summary: Récupère un produit spécifique
+ *     tags: [Produits]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID du produit
+ *     responses:
+ *       200:
+ *         description: Détails du produit avec avis
+ *       404:
+ *         description: Produit non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ */
 app.get('/api/products/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -146,6 +372,51 @@ app.get('/api/products/:id', async (req, res) => {
 
 // --- ROUTE AJOUTER UN AVIS (Respect du contrat) ---
 // --- ROUTE AJOUTER UN AVIS ---
+/**
+ * @swagger
+ * /api/products/{id}/reviews:
+ *   post:
+ *     summary: Ajoute un avis à un produit
+ *     tags: [Produits]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID du produit
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rating
+ *               - comment
+ *             properties:
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 5
+ *               comment:
+ *                 type: string
+ *                 example: "Excellent produit !"
+ *     responses:
+ *       201:
+ *         description: Avis ajouté avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Review'
+ *       400:
+ *         description: Données invalides
+ *       404:
+ *         description: Produit non trouvé
+ *       500:
+ *         description: Erreur serveur
+ */
 app.post('/api/products/:id/reviews', async (req, res) => {
   const { id } = req.params; // L'ID du produit
   const { rating, comment } = req.body; // La note et le commentaire
@@ -182,6 +453,55 @@ app.post('/api/products/:id/reviews', async (req, res) => {
 });
 
 // --- ROUTE RECOMMANDATION MÉTÉO ---
+/**
+ * @swagger
+ * /api/recommendations/weather:
+ *   get:
+ *     summary: Récupère des recommandations basées sur la météo
+ *     tags: [Météo]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Latitude
+ *       - in: query
+ *         name: lon
+ *         required: true
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Longitude
+ *     responses:
+ *       200:
+ *         description: Recommandations météo et produits
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 weather:
+ *                   type: object
+ *                   properties:
+ *                     temp:
+ *                       type: number
+ *                     description:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *                 products:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Coordonnées manquantes
+ *       500:
+ *         description: Erreur serveur
+ */
 app.get('/api/recommendations/weather', async (req, res) => {
   const { lat, lon } = req.query;
   const apiKey = process.env.OPENWEATHER_API_KEY;

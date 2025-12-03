@@ -281,7 +281,7 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import AppHeader from './AppHeader.vue'
@@ -294,8 +294,12 @@ if (!authStore.isAuthenticated) {
   router.push('/login')
 }
 
+// États de la page
 const activeTab = ref('orders')
+const orders = ref([]) // Initialisé vide pour recevoir les données API
+const loadingOrders = ref(false)
 
+// Définition des onglets et icônes
 const tabs = [
   { id: 'orders', label: 'Mes Commandes', icon: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' })) },
   { id: 'info', label: 'Informations', icon: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' })) },
@@ -303,68 +307,62 @@ const tabs = [
   { id: 'security', label: 'Sécurité', icon: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' })) }
 ]
 
+// Propriétés calculées (Computed)
 const userInitials = computed(() => {
-  const name = authStore.userName
+  const name = authStore.userName || 'U'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 })
 
+// On calcule la date à partir de l'info 'created_at' de la base de données
 const memberSince = computed(() => {
-  return 'Nov 2024' // À remplacer par la vraie date
+  const dateString = authStore.user?.created_at
+  
+  if (!dateString) return '...'
+
+  // On formate pour avoir "novembre 2023" (par exemple)
+  // Tu peux ajouter 'day: 'numeric'' si tu veux le jour précis
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    month: 'long',
+    year: 'numeric'
+  })
 })
 
 const orderCount = computed(() => orders.value.length)
 
-// Données mockées
-const orders = ref([
-  {
-    id: 1001,
-    date: '2024-11-20',
-    status: 'delivered',
-    total: 149.99,
-    items: [
-      { id: 1, name: 'MacBook Pro 16"', quantity: 1, price: 149.99, image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400' }
-    ]
-  },
-  {
-    id: 1002,
-    date: '2024-11-15',
-    status: 'processing',
-    total: 79.99,
-    items: [
-      { id: 2, name: 'AirPods Pro', quantity: 1, price: 79.99, image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400' }
-    ]
-  }
-])
-
+// Données du formulaire Profil
 const profileData = ref({
   name: authStore.userName,
   email: authStore.userEmail,
-  phone: '+33 6 12 34 56 78',
-  address: '123 Rue de la Paix, 75001 Paris'
+  phone: authStore.user?.telephone || '',
+  address: authStore.user?.adresse || '',
 })
 
-const addresses = ref([
-  {
-    id: 1,
-    label: 'Domicile',
-    fullAddress: '123 Rue de la Paix, 75001 Paris, France',
-    default: true
-  },
-  {
-    id: 2,
-    label: 'Bureau',
-    fullAddress: '456 Avenue des Champs-Élysées, 75008 Paris, France',
-    default: false
+// Données des adresses
+// On crée une liste dynamique basée sur l'adresse réelle de l'utilisateur
+const addresses = computed(() => {
+  // Si l'utilisateur a une adresse enregistrée, on l'affiche
+  if (authStore.user?.adresse) {
+    return [{
+      id: 1,
+      label: 'Mon Adresse Principale',
+      fullAddress: authStore.user.adresse,
+      default: true
+    }]
   }
-])
+  // Sinon, la liste est vide
+  return []
+})
 
+// Données du formulaire Sécurité
 const securityData = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: ''
 })
 
+// Fonctions utilitaires
 const formatDate = (dateString) => {
+  if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: 'long',
@@ -373,33 +371,69 @@ const formatDate = (dateString) => {
 }
 
 const getStatusClass = (status) => {
+  // On gère les majuscules/minuscules venant de l'API
+  const normalizedStatus = status?.toLowerCase() || 'pending'
+  
   const classes = {
     delivered: 'bg-green-100 text-green-800',
     processing: 'bg-blue-100 text-blue-800',
     shipped: 'bg-purple-100 text-purple-800',
-    cancelled: 'bg-red-100 text-red-800'
+    cancelled: 'bg-red-100 text-red-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    paid: 'bg-green-100 text-green-800'
   }
-  return classes[status] || 'bg-neutral-100 text-neutral-800'
+  return classes[normalizedStatus] || 'bg-neutral-100 text-neutral-800'
 }
 
 const getStatusText = (status) => {
+  const normalizedStatus = status?.toLowerCase() || 'pending'
+  
   const texts = {
     delivered: 'Livrée',
     processing: 'En préparation',
     shipped: 'Expédiée',
-    cancelled: 'Annulée'
+    cancelled: 'Annulée',
+    pending: 'En attente',
+    paid: 'Payée'
   }
-  return texts[status] || 'Inconnue'
+  return texts[normalizedStatus] || status
 }
 
+// Actions utilisateur
 const handleLogout = () => {
   authStore.logout()
   router.push('/')
 }
 
-const saveProfile = () => {
-  authStore.updateUser({ nom: profileData.value.name, email: profileData.value.email })
-  alert('Profil mis à jour !')
+const saveProfile = async () => {
+  try {
+    const res = await fetch('http://localhost:3000/api/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        nom: profileData.value.name,
+        adresse: profileData.value.address,
+        telephone: profileData.value.phone // On envoie le téléphone
+      })
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      // On met à jour le store Pinia avec les nouvelles infos reçues du backend
+      // Comme ça, si on change de page, les infos restent à jour
+      authStore.updateUser(data.user) 
+      alert('Profil mis à jour avec succès !')
+    } else {
+      throw new Error(data.message)
+    }
+  } catch (e) {
+    console.error(e)
+    alert("Erreur lors de la mise à jour : " + e.message)
+  }
 }
 
 const changePassword = () => {
@@ -410,4 +444,36 @@ const changePassword = () => {
   alert('Mot de passe modifié !')
   securityData.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
 }
+
+// Chargement des données au démarrage
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    loadingOrders.value = true
+    try {
+      const res = await fetch('http://localhost:3000/api/orders', {
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        }
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        // Mapping des données API vers le format attendu par le template
+        orders.value = data.orders.map(order => ({
+          id: order.id,
+          date: order.created_at,
+          status: order.statut,
+          total: order.total_amount,
+          items: [] // Le backend n'envoie pas encore les items ici, on laisse vide pour l'instant
+        }))
+      } else {
+        console.error('Erreur récupération commandes:', await res.text())
+      }
+    } catch (e) {
+      console.error("Erreur chargement commandes:", e)
+    } finally {
+      loadingOrders.value = false
+    }
+  }
+})
 </script>

@@ -46,6 +46,64 @@ async function isUserDeleted(userId) {
 // ========================
 //  ENREGISTRER UN PAIEMENT
 // ========================
+/**
+ * @swagger
+ * /api/payments:
+ *   post:
+ *     summary: Enregistre un paiement pour une commande
+ *     tags: [Paiements]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - order_id
+ *               - amount
+ *             properties:
+ *               order_id:
+ *                 type: integer
+ *                 example: 1
+ *               amount:
+ *                 type: number
+ *                 format: float
+ *                 example: 1199.99
+ *               method:
+ *                 type: string
+ *                 enum: [CARD, PAYPAL, APPLE_PAY, GOOGLE_PAY, BANK_TRANSFER, CASH]
+ *                 example: CARD
+ *               status:
+ *                 type: string
+ *                 enum: [SUCCESS, FAILED, PENDING, CANCELLED, EXPIRED, REFUNDED]
+ *                 example: SUCCESS
+ *     responses:
+ *       200:
+ *         description: Paiement traité
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 payment:
+ *                   $ref: '#/components/schemas/Payment'
+ *                 order_status_after_payment:
+ *                   type: object
+ *       400:
+ *         description: Données invalides ou commande non payable
+ *       401:
+ *         description: Non authentifié
+ *       403:
+ *         description: Accès interdit ou compte désactivé
+ *       404:
+ *         description: Commande non trouvée
+ *       500:
+ *         description: Erreur serveur
+ */
 router.post("/", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const { order_id, amount, method, status } = req.body;
@@ -188,6 +246,42 @@ router.post("/", requireAuth, async (req, res) => {
 // ========================
 //  LISTER LES PAIEMENTS D'UNE COMMANDE
 // ========================
+/**
+ * @swagger
+ * /api/payments/order/{order_id}:
+ *   get:
+ *     summary: Liste les paiements d'une commande
+ *     tags: [Paiements]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la commande
+ *     responses:
+ *       200:
+ *         description: Liste des paiements
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 payments:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Payment'
+ *       401:
+ *         description: Non authentifié
+ *       403:
+ *         description: Accès interdit
+ *       404:
+ *         description: Commande non trouvée
+ *       500:
+ *         description: Erreur serveur
+ */
 router.get("/order/:order_id", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const order_id = req.params.order_id;

@@ -110,6 +110,7 @@ import { ref, onMounted } from 'vue'
 const featuredProducts = ref([])
 const recommendedProducts = ref([])
 const weatherMessage = ref('')
+const loading = ref(true)
 
 // Simulation de chargement asynchrone
 onMounted(async () => {
