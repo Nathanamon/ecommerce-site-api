@@ -331,23 +331,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue' // Ajout de onMounted
 import { useRouter } from 'vue-router'
 import { useCartStore } from './stores/cart'
+import { useAuthStore } from './stores/auth' // Import du store Auth
 import AppHeader from './AppHeader.vue'
 import PickupMapModal from './PickupMapModal.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const authStore = useAuthStore() // Initialisation
 
-// Rediriger si le panier est vide
-if (cartStore.itemCount === 0) {
-  router.push('/cart')
-}
+// Rediriger si panier vide ou pas connecté
+if (cartStore.itemCount === 0) router.push('/cart')
+if (!authStore.isAuthenticated) router.push('/login')
 
 const step = ref(1)
 const showPickupMap = ref(false)
-const orderNumber = ref(Math.floor(Math.random() * 10000))
+const orderNumber = ref(null)
+const loading = ref(false)
+const errorMsg = ref('')
 
 const steps = [
   { id: 1, label: 'Livraison' },
@@ -355,6 +358,7 @@ const steps = [
   { id: 3, label: 'Confirmation' }
 ]
 
+// Données du formulaire
 const shippingData = ref({
   firstName: '',
   lastName: '',
@@ -364,21 +368,23 @@ const shippingData = ref({
   phone: ''
 })
 
+// Remplacez ces blocs vers la ligne 30 du script setup
+
 const paymentMethods = [
   {
-    id: 'card',
+    id: 'CARD', // <--- EN MAJUSCULES
     label: 'Carte bancaire',
     description: 'Visa, Mastercard, Amex',
     icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'
   },
   {
-    id: 'paypal',
+    id: 'PAYPAL', // <--- EN MAJUSCULES
     label: 'PayPal',
     description: 'Paiement sécurisé via PayPal',
     icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'
   },
   {
-    id: 'transfer',
+    id: 'BANK_TRANSFER', // <--- EN MAJUSCULES (Optionnel si vous l'avez gardé)
     label: 'Virement bancaire',
     description: 'Paiement par virement',
     icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4'
@@ -386,30 +392,147 @@ const paymentMethods = [
 ]
 
 const paymentData = ref({
-  method: 'card',
+  method: 'CARD', // <--- EN MAJUSCULES AUSSI ICI
   cardNumber: '',
   expiry: '',
   cvv: '',
   cardName: ''
 })
 
-const nextStep = () => {
-  if (step.value < 3) {
-    step.value++
+// --- PRÉ-REMPLISSAGE DU FORMULAIRE ---
+onMounted(() => {
+  if (authStore.user) {
+    // 1. Découpage du nom complet (ex: "Jean Dupont" -> Prénom: Jean, Nom: Dupont)
+    const fullName = authStore.user.nom || ''
+    const nameParts = fullName.split(' ')
+    shippingData.value.firstName = nameParts[0] || ''
+    shippingData.value.lastName = nameParts.slice(1).join(' ') || ''
+
+    // 2. Remplissage téléphone
+    shippingData.value.phone = authStore.user.telephone || ''
+
+    // 3. Remplissage adresse
+    // Note : Comme la BDD n'a qu'un champ "adresse", on le met dans le champ principal.
+    // L'utilisateur devra peut-être compléter le Code Postal et la Ville manuellement.
+    shippingData.value.address = authStore.user.adresse || ''
   }
-  
-  if (step.value === 3) {
-    // Vider le panier après confirmation
-    setTimeout(() => {
-      cartStore.clearCart()
-    }, 3000)
+})
+
+// --- PROCESSUS DE COMMANDE ---
+const processCheckout = async () => {
+  loading.value = true
+  errorMsg.value = ''
+
+  try {
+    const token = authStore.token
+
+    // --- FIX : On arrondit le total avant de l'envoyer partout ---
+    const finalAmount = parseFloat(cartStore.total.toFixed(2));
+    // -------------------------------------------------------------
+
+    // 1. Créer la commande (Order)
+    // On concatène l'adresse complète pour la sauvegarde
+    const fullDeliveryAddress = `${shippingData.value.address}, ${shippingData.value.zipCode} ${shippingData.value.city}`
+
+    const orderRes = await fetch('http://localhost:3000/api/orders', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        total_amount: finalAmount,
+        delivery_address: fullDeliveryAddress
+      })
+    })
+
+    // --- DEBUG : Lire le message d'erreur réel du serveur ---
+    if (!orderRes.ok) {
+      const errorText = await orderRes.text(); // On lit la réponse brute
+      console.error("❌ ERREUR SERVEUR DÉTAILLÉE :", errorText);
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.message || errorJson.error || 'Erreur serveur inconnue');
+      } catch (e) {
+        throw new Error('Erreur serveur (non-JSON): ' + errorText);
+      }
+    }
+    const orderData = await orderRes.json()
+    const orderId = orderData.order.id
+    // On convertit en String avant de slice, au cas où c'est un nombre
+    orderNumber.value = String(orderId).slice(0, 8).toUpperCase()
+
+    // 2. Ajouter les articles (Order Items)
+    const itemPromises = cartStore.items.map(item => {
+      // --- DEBUG ---
+      console.log("Envoi item :", {
+        order_id: orderId,
+        product_id: item.product.id, // <--- C'est souvent lui le coupable (undefined ?)
+        quantity: item.quantity
+      });
+      return fetch('http://localhost:3000/api/order-items', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          order_id: orderId,
+          product_id: item.product.id,
+          quantity: item.quantity
+        })
+      })
+    })
+
+    await Promise.all(itemPromises)
+
+    // 3. Enregistrer le paiement
+    const paymentRes = await fetch('http://localhost:3000/api/payments', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        order_id: orderId,
+        amount: finalAmount,
+        method: paymentData.value.method,
+        status: 'SUCCESS'
+      })
+    })
+
+    if (!paymentRes.ok) {
+      const errorText = await paymentRes.text();
+      console.error("❌ ERREUR PAIEMENT :", errorText);
+      throw new Error('Erreur de paiement : ' + errorText);
+    }
+
+    // 4. Succès
+    cartStore.clearCart()
+    step.value = 3
+
+  } catch (e) {
+    console.error(e)
+    errorMsg.value = "Une erreur est survenue lors de la commande. Veuillez réessayer."
+  } finally {
+    loading.value = false
+  }
+}
+
+const nextStep = () => {
+  if (step.value === 1) {
+    if (!shippingData.value.address || !shippingData.value.city) {
+      alert("Veuillez remplir l'adresse")
+      return
+    }
+    step.value++
+  } else if (step.value === 2) {
+    processCheckout()
   }
 }
 
 const prevStep = () => {
-  if (step.value > 1) {
-    step.value--
-  }
+  if (step.value > 1) step.value--
 }
 
 const selectPickupPoint = (point) => {

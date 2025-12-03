@@ -44,6 +44,66 @@ async function isUserDeleted(userId) {
 // ========================
 //  CRÉER UNE LIVRAISON
 // ========================
+/**
+ * @swagger
+ * /api/deliveries:
+ *   post:
+ *     summary: Crée une livraison pour une commande
+ *     tags: [Livraisons]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - order_id
+ *             properties:
+ *               order_id:
+ *                 type: integer
+ *                 example: 1
+ *               delivery_type:
+ *                 type: string
+ *                 enum: [HOME_DELIVERY, PICKUP_POINT, LOCKER, STORE_PICKUP, EXPRESS, STANDARD]
+ *                 example: HOME_DELIVERY
+ *               pickup_point_id:
+ *                 type: integer
+ *                 example: 1
+ *               tracking_number:
+ *                 type: string
+ *                 example: "TRK-123456789"
+ *               statut:
+ *                 type: string
+ *                 enum: [PENDING, SHIPPED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, DELAYED]
+ *                 example: PENDING
+ *               estimated_date:
+ *                 type: string
+ *                 format: date-time
+ *     responses:
+ *       200:
+ *         description: Livraison créée
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 delivery:
+ *                   $ref: '#/components/schemas/Delivery'
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Non authentifié
+ *       403:
+ *         description: Accès interdit ou compte désactivé
+ *       404:
+ *         description: Commande non trouvée
+ *       500:
+ *         description: Erreur serveur
+ */
 router.post("/", requireAuth, async (req, res) => {
   const userId = req.user.id;
   let {
@@ -137,6 +197,42 @@ if (order.payment_status !== "PAID" ||
 // ========================
 //  SUIVRE LIVRAISON
 // ========================
+/**
+ * @swagger
+ * /api/deliveries/order/{order_id}:
+ *   get:
+ *     summary: Récupère les livraisons d'une commande
+ *     tags: [Livraisons]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la commande
+ *     responses:
+ *       200:
+ *         description: Liste des livraisons
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 deliveries:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Delivery'
+ *       401:
+ *         description: Non authentifié
+ *       403:
+ *         description: Accès interdit
+ *       404:
+ *         description: Commande non trouvée
+ *       500:
+ *         description: Erreur serveur
+ */
 router.get("/order/:order_id", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const order_id = req.params.order_id;
@@ -172,6 +268,65 @@ router.get("/order/:order_id", requireAuth, async (req, res) => {
 // ========================
 //  METTRE À JOUR UNE LIVRAISON
 // ========================
+/**
+ * @swagger
+ * /api/deliveries/{delivery_id}:
+ *   patch:
+ *     summary: Met à jour une livraison
+ *     tags: [Livraisons]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: delivery_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la livraison
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               statut:
+ *                 type: string
+ *                 enum: [PENDING, SHIPPED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, DELAYED]
+ *                 example: SHIPPED
+ *               tracking_number:
+ *                 type: string
+ *                 example: "TRK-987654321"
+ *               estimated_date:
+ *                 type: string
+ *                 format: date-time
+ *               delivery_type:
+ *                 type: string
+ *                 enum: [HOME_DELIVERY, PICKUP_POINT, LOCKER, STORE_PICKUP, EXPRESS, STANDARD]
+ *               pickup_point_id:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Livraison mise à jour
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 delivery:
+ *                   $ref: '#/components/schemas/Delivery'
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Non authentifié
+ *       403:
+ *         description: Accès interdit
+ *       404:
+ *         description: Livraison non trouvée
+ *       500:
+ *         description: Erreur serveur
+ */
 router.patch("/:delivery_id", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const delivery_id = req.params.delivery_id;

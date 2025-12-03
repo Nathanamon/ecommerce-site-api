@@ -1,64 +1,126 @@
+// client/src/stores/auth.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import axios from 'axios'
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
+
+  // ============================
+  // STATE
+  // ============================
   const user = ref(null)
   const token = ref(null)
-  const loading = ref(false)
 
-  // Getters
-  const isAuthenticated = computed(() => !!user.value)
-  const userName = computed(() => user.value?.nom || '')
-  const userEmail = computed(() => user.value?.email || '')
+  // ============================
+  // GETTERS
+  // ============================
+  const isAuthenticated = computed(() => !!token.value)
+  const userName = computed(() => user.value?.nom || "")
+  const userEmail = computed(() => user.value?.email || "")
 
-  // Actions
-  const login = (userData, authToken) => {
-    user.value = userData
-    token.value = authToken
-    
-    // Sauvegarder dans le localStorage
-    localStorage.setItem('user', JSON.stringify(userData))
-    localStorage.setItem('token', authToken)
+  // ============================
+  // ACTIONS
+  // ============================
+
+  // 1) REGISTER
+  const register = async (name, email, password, adresse) => {
+    const res = await axios.post("http://localhost:3000/api/register", {
+      name,
+      email,
+      password,
+      adresse
+    })
+    return res.data
   }
 
-  const logout = () => {
-    user.value = null
-    token.value = null
-    
-    // Supprimer du localStorage
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
+  // 2) LOGIN
+  const login = async (email, password) => {
+    const res = await axios.post("http://localhost:3000/api/login", {
+      email,
+      password
+    })
+
+    token.value = res.data.token
+    user.value = res.data.user
+
+    localStorage.setItem("token", token.value)
+    localStorage.setItem("user", JSON.stringify(user.value))
+
+    return res.data
   }
 
-  const initAuth = () => {
-    // Récupérer depuis le localStorage au démarrage
-    const savedUser = localStorage.getItem('user')
-    const savedToken = localStorage.getItem('token')
-    
-    if (savedUser && savedToken) {
-      user.value = JSON.parse(savedUser)
-      token.value = savedToken
+  // Service axios autorisé
+  const authHeader = () => {
+    return {
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      }
     }
   }
 
-  const updateUser = (userData) => {
-    user.value = { ...user.value, ...userData }
-    localStorage.setItem('user', JSON.stringify(user.value))
+  // 3) LOGOUT
+  const logout = () => {
+    token.value = null
+    user.value = null
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
   }
 
-  // Initialiser au chargement
+  // 4) LOAD PROFILE
+  const loadUserProfile = async () => {
+    if (!token.value) return
+
+    const res = await axios.get("http://localhost:3000/api/profile", authHeader())
+    user.value = res.data.user
+    localStorage.setItem("user", JSON.stringify(user.value))
+  }
+
+  // 5) UPDATE PROFILE
+  const updateProfile = async (updates) => {
+    await axios.put("http://localhost:3000/api/profile", updates, authHeader())
+    Object.assign(user.value, updates)
+    localStorage.setItem("user", JSON.stringify(user.value))
+  }
+
+  // 6) DELETE ACCOUNT
+  const deleteAccount = async () => {
+    await axios.delete("http://localhost:3000/api/delete", authHeader())
+    logout()
+  }
+
+  // 7) GET USER ORDERS HISTORY
+  const getUserOrders = async () => {
+    const res = await axios.get("http://localhost:3000/api/orders", authHeader())
+    return res.data.orders
+  }
+
+  // ============================
+  // INIT AUTH AUTOMATIQUE AU DEMARRAGE
+  // ============================
+  const initAuth = () => {
+    const savedUser = localStorage.getItem("user")
+    const savedToken = localStorage.getItem("token")
+
+    if (savedUser && savedToken) {
+      token.value = savedToken
+      user.value = JSON.parse(savedUser)
+    }
+  }
+
   initAuth()
 
   return {
     user,
     token,
-    loading,
     isAuthenticated,
     userName,
     userEmail,
+    register,
     login,
     logout,
-    updateUser
+    loadUserProfile,
+    updateProfile,
+    deleteAccount,
+    getUserOrders
   }
 })
