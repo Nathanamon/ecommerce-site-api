@@ -1,41 +1,27 @@
-const jwt = require("jsonwebtoken");
-const supabase = require("../supabaseClient");
+const jwt = require('jsonwebtoken');
+
+// Récupération de la clé secrète depuis le .env
 const JWT_SECRET = process.env.JWT_SECRET;
 
-async function requireAuth(req, res, next) {
-  const header = req.headers.authorization;
-
-  if (!header) {
-    return res.status(401).json({ message: "Token manquant" });
-  }
-
-  if (!header.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Format de token invalide" });
-  }
-
-  const token = header.split(" ")[1];
-
+module.exports = (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // 1. Récupérer le token du header (Format: "Bearer <token>")
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      throw new Error('Token manquant');
+    }
 
-    req.user = {
-      id: decoded.id,
-      email: decoded.email
-    };
-
-    const { data: user } = await supabase
-      .from("users")
-      .select("deleted_at")
-      .eq("id", decoded.id)
-      .single();
-
-    req.user.deleted = user && user.deleted_at !== null;
-
-    return next();
-
-  } catch (err) {
-    return res.status(401).json({ message: "Token invalide" });
+    const token = authHeader.split(' ')[1]; // On prend la partie après "Bearer"
+    
+    // 2. Vérifier le token
+    const decodedToken = jwt.verify(token, JWT_SECRET);
+    
+    // 3. Ajouter l'ID utilisateur à la requête pour les routes suivantes
+    req.user = { id: decodedToken.id };
+    
+    next(); // Passer à la suite
+  } catch (error) {
+    res.status(401).json({ error: 'Requête non authentifiée !' });
   }
-}
-
-module.exports = requireAuth;
+};

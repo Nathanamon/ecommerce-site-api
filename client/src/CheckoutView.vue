@@ -331,16 +331,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue' // Ajout de onMounted
+import { ref, onMounted } from 'vue' 
 import { useRouter } from 'vue-router'
 import { useCartStore } from './stores/cart'
-import { useAuthStore } from './stores/auth' // Import du store Auth
+import { useAuthStore } from './stores/auth'
 import AppHeader from './AppHeader.vue'
 import PickupMapModal from './PickupMapModal.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
-const authStore = useAuthStore() // Initialisation
+const authStore = useAuthStore()
 
 // Rediriger si panier vide ou pas connecté
 if (cartStore.itemCount === 0) router.push('/cart')
@@ -372,19 +372,19 @@ const shippingData = ref({
 
 const paymentMethods = [
   {
-    id: 'CARD', // <--- EN MAJUSCULES
+    id: 'CARD', 
     label: 'Carte bancaire',
     description: 'Visa, Mastercard, Amex',
     icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'
   },
   {
-    id: 'PAYPAL', // <--- EN MAJUSCULES
+    id: 'PAYPAL', 
     label: 'PayPal',
     description: 'Paiement sécurisé via PayPal',
     icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'
   },
   {
-    id: 'BANK_TRANSFER', // <--- EN MAJUSCULES (Optionnel si vous l'avez gardé)
+    id: 'BANK_TRANSFER',
     label: 'Virement bancaire',
     description: 'Paiement par virement',
     icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4'
@@ -392,7 +392,7 @@ const paymentMethods = [
 ]
 
 const paymentData = ref({
-  method: 'CARD', // <--- EN MAJUSCULES AUSSI ICI
+  method: 'CARD',
   cardNumber: '',
   expiry: '',
   cvv: '',
@@ -428,7 +428,6 @@ const processCheckout = async () => {
 
     // --- FIX : On arrondit le total avant de l'envoyer partout ---
     const finalAmount = parseFloat(cartStore.total.toFixed(2));
-    // -------------------------------------------------------------
 
     // 1. Créer la commande (Order)
     // On concatène l'adresse complète pour la sauvegarde

@@ -223,7 +223,7 @@ import ProductGrid from './ProductGrid.vue'
 const cartStore = useCartStore()
 const promoCode = ref('')
 
-// Produits recommandés (à remplacer par un vrai appel API)
+// à remplacer par un vrai appel API
 const recommendedProducts = ref([
   {
     id: 101,

@@ -13,7 +13,17 @@ const swaggerJsdoc = require('swagger-jsdoc');
 
 const app = express();
 const port = process.env.PORT ;
+const rateLimit = require('express-rate-limit');
 
+// rate limiting
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, 
+	max: 100, 
+	message: { error: "Trop de requêtes, veuillez réessayer plus tard." }
+});
+
+// Appliquer à toutes les routes /api
+app.use('/api', limiter);
 app.use(cors());
 app.use(express.json());
 app.use("/api", userRoutes)
